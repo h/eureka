@@ -29,10 +29,13 @@ class RobotsTxt(object):
             robot_file = self.robot_files[robot_url]
         else:
             try:
-                with self.url_opener(robot_url) as robotstxt:
+                robotstxt = self.url_opener(robot_url)
+                try:
                     robot_file = RobotFileParser()
                     robot_file.parse(robotstxt.readlines())
-            except urllib2.HTTPError:
+                finally:
+                    robotstxt.close()
+            except (urllib2.HTTPError, urllib2.URLError):
                 robot_file = None
             self.robot_files[robot_url] = robot_file
         return robot_file
@@ -56,5 +59,6 @@ class RobotsTxt(object):
         if robot:
             return robot.can_fetch(user_agent, url)
         else:
+            # if no robot file exists, this implies download consent
             return True
 

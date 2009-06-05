@@ -178,7 +178,7 @@ class Crawler():
 
         # download multiple times in case of url-errors...
         error = None
-        for _ in xrange(self.retries + 1):
+        for retry in xrange(self.retries + 1):
 
             # let the cache call _wait_for_delay on cache miss
             request.wait_for_delay = self._wait_for_delay
@@ -202,9 +202,17 @@ class Crawler():
             except urllib2.HTTPError, e:
                 # if many errors happen, retain the first one
                 error = error or e
+                if not self.silent:
+                    if retry < self.retries:
+                        print 'retrying ...',
+                    else:
+                        print 'failed'
+            except urllib2.URLError, e:
+                if not self.silent:
+                    print 'failed'
+                raise e # don't retry downloading page if URLError occurred...
 
         # we can only get here, if an error occurred
-        print
         print '------------------------'
         print '  HTTP error code %s for "%s"' % (error.code, url)
         print '  With post data "%s"' % data
