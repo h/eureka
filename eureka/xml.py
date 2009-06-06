@@ -161,7 +161,11 @@ class EurekaElement(etree.ElementBase):
             url = 'file://' + abspath(fp.name).replace(os.path.sep, '/')
             print
             print 'Opening webbrowser: ',
-            print webbrowser.get(browser).open(url, new=new)
+            try:
+                browser = webbrowser.get(browser)
+            except Exception:
+                browser = webbrowser.GenericBrowser(browser)
+            print browser.open(url, new=new)
 
             # wait for user input before continuing to run the script. Otherwise,
             # we may end up opening a lot of windows at once!
