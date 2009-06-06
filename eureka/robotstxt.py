@@ -24,7 +24,7 @@ class RobotsTxt(object):
         self.robot_files = {}
         self.url_opener = url_opener
 
-    def get_robot(self, robot_url):
+    def get_robot(self, robot_url, silent):
         if robot_url in self.robot_files:
             robot_file = self.robot_files[robot_url]
         else:
@@ -36,11 +36,14 @@ class RobotsTxt(object):
                 finally:
                     robotstxt.close()
             except (urllib2.HTTPError, urllib2.URLError):
+                if not silent:
+                    print '  Could not fetch robots.txt. This is OK.'
+                    print
                 robot_file = None
             self.robot_files[robot_url] = robot_file
         return robot_file
 
-    def can_fetch(self, url, user_agent=None):
+    def can_fetch(self, url, user_agent=None, silent=True):
         '''
         Determines whether a given url may be fetched using the given
         user_agent. Downloads the appropriate robots.txt file, as needed.
@@ -54,7 +57,7 @@ class RobotsTxt(object):
         if not user_agent:
             user_agent = '*'
         robot_url = make_robot_url(url)
-        robot = self.get_robot(robot_url)
+        robot = self.get_robot(robot_url, silent)
 
         if robot:
             return robot.can_fetch(user_agent, url)

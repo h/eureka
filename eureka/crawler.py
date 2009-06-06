@@ -45,7 +45,7 @@ class Crawler():
             from eureka.robotstxt import RobotsTxt
             self.can_fetch = RobotsTxt(self.fetch).can_fetch
         else:
-            self.can_fetch = lambda x,y: True
+            self.can_fetch = lambda x,y,silent=False: True
 
         http_processors = ()
 
@@ -154,7 +154,7 @@ class Crawler():
                 return html.submit_form(url, extra_values=data, open_http=http)
 
         # check robots.txt to make sure the page isn't disallowed!
-        if not self.can_fetch(url, self.user_agent):
+        if not self.can_fetch(url, self.user_agent, silent=self.silent):
             from robotstxt import RobotDisallow
             raise RobotDisallow('Error: URL is disallowed in robots.txt: %s'
                                 % short_repr(url, 80))
@@ -216,7 +216,6 @@ class Crawler():
         print '------------------------'
         print '  HTTP error code %s for "%s"' % (error.code, url)
         print '  With post data "%s"' % data
-        print
         raise error
 
     def fetch_xml(self, *args, **kwargs):
