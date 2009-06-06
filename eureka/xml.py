@@ -223,13 +223,22 @@ class EurekaSelectElement(EurekaElement):
 
         If this is a multi-select, this is a set-like object that
         represents all the selected options.
+
+        If no option is selected, we default to using the first option.
+        ... not sure if this is optimal.
+
         """
+
         if self.multiple:
             return EurekaMultipleSelectOptions(self)
-        for el in self.options:
-            if 'selected' in el.attrib:
-                return el.value
-        return None
+        else:
+            first_option = None
+            for el in self.options:
+                if 'selected' in el.attrib:
+                    return el.value
+                if first_option is None:
+                    first_option = el
+            return first_option
 
     def _value__set(self, value):
         if self.multiple:
