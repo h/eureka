@@ -237,7 +237,7 @@ class EurekaSelectElement(EurekaElement):
                     return el.value
                 if first_option is None:
                     first_option = el
-            return first_option
+            return first_option.value
 
     def _value__set(self, value):
         if self.multiple:
