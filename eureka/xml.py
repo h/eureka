@@ -159,7 +159,6 @@ class EurekaElement(etree.ElementBase):
         with NamedTemporaryFile('w+b', suffix='.html', prefix='eureka') as fp:
             self.write(fp, method='html', pretty_print=True, wait=False)
             url = 'file://' + abspath(fp.name).replace(os.path.sep, '/')
-            print
             print 'Opening webbrowser: ',
             try:
                 browser = webbrowser.get(browser)
