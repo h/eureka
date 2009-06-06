@@ -298,16 +298,26 @@ class EurekaFormElement(EurekaElement):
 
     def iterate_fields(self, *args):
         '''
+        Just like ``iterate_options``, but returns each option's "value"
+        attribute.
+
+        '''
+
+        for option in self.iterate_options(*args):
+            yield option.value
+
+    def iterate_options(self, *args):
+        '''
         Iterates through all possible values of the input elements in ``args``.
 
         At each iteration step, we yield the current values of the input
         elements.
 
-        Eg. to loop over all possible values of the ``term`` and ``year``
+        Eg. to loop over all possible option elements of the "term" and "year"
         fields in a form, you could write:
 
         > form = some_html.forms[0]
-        > for year, term in form.iterate_fields('year', 'term'):
+        > for year, term in form.iterate_options('year', 'term'):
         >     html = crawler.fetch_html(form)
         >     ...
 
@@ -329,7 +339,7 @@ class EurekaFormElement(EurekaElement):
         # iterate through all options
         stack = []
         field, _, _ = args[0]
-        stack.append((None, iter(field.value_options)))
+        stack.append((None, iter(field.options)))
         while stack:
             field, regex1, regex2 = args[len(stack)-1]
             previous_value, options = stack.pop()
@@ -348,7 +358,7 @@ class EurekaFormElement(EurekaElement):
 
             if len(stack) < len(args):
                 field, _, _ = args[len(stack)]
-                stack.append((None, iter(field.value_options)))
+                stack.append((None, iter(field.options)))
             else:
                 result = tuple(value for value, options in stack)
                 if len(result) == 1:
