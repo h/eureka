@@ -38,7 +38,6 @@ class RobotsTxt(object):
             except (urllib2.HTTPError, urllib2.URLError):
                 if not silent:
                     print '  Could not fetch robots.txt. This is OK.'
-                    print
                 robot_file = None
             self.robot_files[robot_url] = robot_file
         return robot_file
