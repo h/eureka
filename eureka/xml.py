@@ -131,7 +131,7 @@ class EurekaElement(etree.ElementBase):
 
         write_doc = etree.ElementTree(element=self).write
         write_doc(filename, *args, **kwargs)
-        if not isinstance(filename, base_string):
+        if not isinstance(filename, basestring):
             filename.flush()
         if wait:
             print
