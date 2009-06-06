@@ -187,6 +187,47 @@ class EurekaOptionElement(EurekaElement):
         else:
             return normalize_spaces(self.text or '')
 
+class EurekaInputElement(EurekaElement):
+    '''
+    modifies the standard lxml input elements to have an empty string as its
+    value, in stead of None, when no value is specified.
+
+    '''
+
+    def _value__get(self):
+        '''
+        Get/set the value of this element, using the ``value`` attribute.
+
+        Also, if this is a checkbox and it has no value, this defaults
+        to ``'on'``.  If it is a checkbox or radio that is not
+        checked, this returns None.
+
+        '''
+
+        if self.checkable:
+            if self.checked:
+                return self.get('value') or 'on'
+            else:
+                return None
+        return self.get('value') or ''
+    def _value__set(self, value):
+        if self.checkable:
+            if not value:
+                self.checked = False
+            else:
+                self.checked = True
+                if isinstance(value, basestring):
+                    self.set('value', value)
+        else:
+            self.set('value', value)
+    def _value__del(self):
+        if self.checkable:
+            self.checked = False
+        else:
+            if 'value' in self.attrib:
+                del self.attrib['value']
+    value = property(_value__get, _value__set, _value__del, doc=_value__get.__doc__)
+
 class EurekaMultipleSelectOptions(html.MultipleSelectOptions):
     def __iter__(self):
         for option in self.options:
@@ -383,7 +424,8 @@ class EurekaFormElement(EurekaElement):
 xml_parser_lookup = etree.ElementDefaultClassLookup(element=EurekaElement)
 html_parser_lookup = html.HtmlElementClassLookup(
         mixins=(('option', EurekaOptionElement), ('form', EurekaFormElement),
-                ('select', EurekaSelectElement), ('*', EurekaElement),))
+                ('select', EurekaSelectElement), ('input', EurekaInputElement),
+                ('*', EurekaElement),))
 
 xml_parser = etree.XMLParser()
 xml_parser.setElementClassLookup(xml_parser_lookup)
