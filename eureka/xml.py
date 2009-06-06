@@ -197,8 +197,19 @@ class EurekaSelectElement(EurekaElement):
 
     @property
     def options(self):
-        return dict((option.value, option)
-                    for option in html._options_xpath(self))
+        ''' returns the option elements of this select element '''
+
+        return iter(html._options_xpath(self))
+
+    @property
+    def options_dict(self):
+        '''
+        a mapping that maps values to the corresponding option element with
+        that value
+
+        '''
+
+        return dict((option.value, option) for option in self.options)
 
     def _value__get(self):
         """
@@ -209,7 +220,7 @@ class EurekaSelectElement(EurekaElement):
         """
         if self.multiple:
             return EurekaMultipleSelectOptions(self)
-        for el in html._options_xpath(self):
+        for el in self.options:
             if 'selected' in el.attrib:
                 return el.value
         return None
@@ -222,14 +233,14 @@ class EurekaSelectElement(EurekaElement):
             self.value.update(value)
             return
         if value is not None:
-            for el in html._options_xpath(self):
+            for el in self.options:
                 if el.value == value:
                     checked_option = el
                     break
             else:
                 raise ValueError(
                     "There is no option with the value of %r" % value)
-        for el in html._options_xpath(self):
+        for el in self.options:
             if 'selected' in el.attrib:
                 del el.attrib['selected']
         if value is not None:
