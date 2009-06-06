@@ -282,9 +282,20 @@ def add_parameters_to_url(url, values):
     '''
 
     scheme, netloc, path, params, query, fragment = urlparse.urlparse(url)
-    query = dict(urldecode(query))
-    query.update(values)
-    query = urllib.urlencode(query)
+    query_list = urldecode(query)
+
+    # remove these keys from the GET parameters, as we are specifying new
+    # values for them...
+    delete_keys = set(dict(values))
+    new_query = []
+    for key, value in query_list:
+        if key not in delete_keys:
+            new_query.append((key, value))
+    for key, value in values:
+        if key not in delete_keys:
+            new_query.append((key, value))
+
+    query = urllib.urlencode(new_query)
     return urlparse.urlunparse((scheme, netloc, path, params, query, fragment))
 
 crawler = Crawler()
