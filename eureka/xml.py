@@ -267,18 +267,6 @@ def _get_input_value(input_element):
         return iter(input_element.value).next()
     else:
         return input_element.value
-
-def _set_input_value(input_element, value):
-    '''
-    Sets the value of an html input element. Handles MultipleSelectOptions
-    fields correctly.
-
-    '''
-
-    if input_element.multiple:
-        input_element.value = [value]
-    else:
-        input_element.value = value
 # }}} functions on html input elements needed for ``EurekaFormElement``
 
 class EurekaFormElement(EurekaElement):
@@ -353,25 +341,25 @@ class EurekaFormElement(EurekaElement):
         stack.append((None, iter(field.options)))
         while stack:
             field, regex1, regex2 = args[len(stack)-1]
-            previous_value, options = stack.pop()
+            previous_option, options = stack.pop()
 
             try:
-                cur_value = options.next()
-                stack.append((cur_value, options))
+                cur_option = options.next()
+                stack.append((cur_option, options))
             except StopIteration:
                 continue
 
-            if regex1 and not re.search(regex1, cur_value) or \
-               regex2 and not re.search(regex2, field.options[cur_value].text):
-                continue # skip to the next iteration if regexes don' match
+            if regex1 and not re.search(regex1, cur_option.value) or \
+               regex2 and not re.search(regex2, cur_option.text):
+                continue # skip to the next iteration if regexes don't match
 
-            _set_input_value(field, cur_value)
+            field.value = cur_option.value
 
             if len(stack) < len(args):
                 field, _, _ = args[len(stack)]
                 stack.append((None, iter(field.options)))
             else:
-                result = tuple(value for value, options in stack)
+                result = tuple(option for option, options in stack)
                 if len(result) == 1:
                     # no need to use tuples, if there is only one result
                     yield result[0]
