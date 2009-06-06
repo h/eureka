@@ -131,6 +131,8 @@ class EurekaElement(etree.ElementBase):
 
         write_doc = etree.ElementTree(element=self).write
         write_doc(filename, *args, **kwargs)
+        if not isinstance(filename, base_string):
+            filename.flush()
         if wait:
             print
             print 'Wrote xml to "%s".' % filename
