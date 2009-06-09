@@ -357,12 +357,8 @@ class EurekaFormElement(EurekaElement):
 
         '''
 
-        for option_list in self.iterate_options(*args):
-            # if only one argument is specified, option_list is actually a single option, not a list
-            if len(args) == 1:
-                yield option_list.value
-            else:
-                yield tuple(option.value for option in option_list)
+        for option in self.iterate_options(*args):
+            yield option.value
 
     def iterate_options(self, *args):
         '''
