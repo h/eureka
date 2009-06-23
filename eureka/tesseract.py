@@ -10,19 +10,19 @@ supports tiff and bmp.
 INSTALLATION:
 You will need to install tesseract as well as the Python Imaging Library (PIL).
 Under Debian/Ubuntu, this is the package "python-imaging".
+Python-tesseract requires python2.5 or later.
 
 
-Example usages:
-
+USAGE:
 From the shell:
  $ ./tesseract.py image.jpeg         # prints the recognized text in the image
-
 In python:
  > from tesseract import image_to_string
  > import Image
  > print image_to_string(Image('image.jpeg'))
 
 
+COPYRIGHT:
 Python-tesseract is released under the GPL v3.
 Copyright (c) Samuel Hoffstaetter, 2009
 
