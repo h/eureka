@@ -162,7 +162,10 @@ def entity_encode(string):
 
     '''
 
-    return string.encode('ascii', 'xmlcharrefreplace')
+    if string is None:
+        return None
+    else:
+        return string.encode('ascii', 'xmlcharrefreplace')
 
 def uniq(iterable):
     return (x[0] for x in groupby(sorted(iterable)))
