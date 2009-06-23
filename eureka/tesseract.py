@@ -89,7 +89,7 @@ class TesseractError(Exception):
         self.status = status
         self.message = message
 
-def image_to_string(image, lang=lang):
+def image_to_string(image, lang=None):
     '''
     Runs tesseract on the specified image. First, the image is written to disk,
     and then the tesseract command is run on the image. Resseract's result is
