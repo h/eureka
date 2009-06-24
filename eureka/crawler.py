@@ -214,7 +214,7 @@ class Crawler():
 
         # we can only get here, if an error occurred
         print '------------------------'
-        print '  HTTP error code %s for "%s"' % (error.code, url)
+        print '  HTTP code %s for "%s"' % (error.code, url)
         print '  With post data "%s"' % data
         raise error
 
