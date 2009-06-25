@@ -1,54 +1,41 @@
 #!/usr/bin/env python
 '''
-Python-tesseract is an optical character recognition (OCR) tool for python.
-That is, it will recognize and "read" the text embedded in images.
+Python-tesseract is a python wrapper to google tesseract-ocr
+( http://code.google.com/p/tesseract-ocr/ ). Python-tesseract is also useful as
+a supplemental script to tesseract, as it can read all image types supported by
+PIL, including jpeg, png, gif, bmp, tiff, and others. Tesseract by default only
+supports tiff and bmp.
 
-Python-tesseract is a wrapper for google's Tesseract-OCR
-( http://code.google.com/p/tesseract-ocr/ ).  It is also useful as a
-stand-alone invocation script to tesseract, as it can read all image types
-supported by the Python Imaging Library, including jpeg, png, gif, bmp, tiff,
-and others, whereas tesseract-ocr by default only supports tiff and bmp.
-Additionally, if used as a script, Python-tesseract will print the recognized
-text in stead of writing it to a file. Support for confidence estimates and
-bounding box data is planned for future releases.
+
+INSTALLATION:
+You will need to install tesseract as well as the Python Imaging Library (PIL).
+Under Debian/Ubuntu, this is the package "python-imaging".
+Python-tesseract requires python2.5 or later.
 
 
 USAGE:
 From the shell:
- $ ./tesseract.py test.png                  # prints recognized text in image
- $ ./tesseract.py -l fra test-european.jpg  # recognizes french text
+ $ ./tesseract.py image.jpeg         # prints the recognized text in the image
 In python:
- > import Image
  > from tesseract import image_to_string
- > print image_to_string(Image.open('test.png'))
- > print image_to_string(Image.open('test-european.jpg'), lang='fra')
-
-
-INSTALLATION:
-* Python-tesseract requires python 2.5 or later.
-* You will need the Python Imaging Library (PIL).  Under Debian/Ubuntu, this is
-  the package "python-imaging".
-* Install google tesseract-ocr from http://code.google.com/p/tesseract-ocr/ .
-  You must be able to invoke the tesseract command as "tesseract". If this
-  isn't the case, for example because tesseract isn't in your PATH, you will
-  have to change the "tesseract_cmd" variable at the top of 'tesseract.py'.
+ > import Image
+ > print image_to_string(Image('image.jpeg'))
 
 
 COPYRIGHT:
 Python-tesseract is released under the GPL v3.
 Copyright (c) Samuel Hoffstaetter, 2009
-http://wiki.github.com/hoffstaetter/python-tesseract
 
 '''
 
-# CHANGE THIS IF TESSERACT IS NOT IN YOUR PATH, OR IS NAMED DIFFERENTLY
-tesseract_cmd = 'tesseract'
-
+from __future__ import with_statement
 import Image
 import StringIO
 import subprocess
 import sys
 import os
+
+tesseract_cmd = 'tesseract'
 
 __all__ = ['image_to_string']
 
@@ -83,11 +70,8 @@ def get_errors(error_string):
     '''
 
     lines = error_string.splitlines()
-    error_lines = tuple(line for line in lines if line.find('Error') >= 0)
-    if len(error_lines) > 0:
-        return '\n'.join(error_lines)
-    else:
-        return error_string.strip()
+    error_lines = (line for line in lines if line.find('Error') >= 0)
+    return '\n'.join(error_lines)
 
 def tempnam():
     ''' returns a temporary file-name '''
@@ -101,10 +85,9 @@ def tempnam():
         sys.stderr = stderr
 
 class TesseractError(Exception):
-    def __init__(self, status, message):
+    def __init__(status, message):
         self.status = status
         self.message = message
-        self.args = (status, message)
 
 def image_to_string(image, lang=None):
     '''
@@ -123,34 +106,17 @@ def image_to_string(image, lang=None):
         if status:
             errors = get_errors(error_string)
             raise TesseractError(status, errors)
-        f = file(output_file_name)
-        try:
+        with file(output_file_name) as f:
             return f.read().strip()
-        finally:
-            f.close()
     finally:
         cleanup(input_file_name)
         cleanup(output_file_name)
 
 if __name__ == '__main__':
-    if len(sys.argv) == 2:
-        filename = sys.argv[1]
-        try:
-            image = Image.open(filename)
-        except IOError:
-            sys.stderr.write('ERROR: Could not open file "%s"\n' % filename)
-            exit(1)
-        print image_to_string(image)
-    elif len(sys.argv) == 4 and sys.argv[1] == '-l':
-        lang = sys.argv[2]
-        filename = sys.argv[3]
-        try:
-            image = Image.open(filename)
-        except IOError:
-            sys.stderr.write('ERROR: Could not open file "%s"\n' % filename)
-            exit(1)
-        print image_to_string(image, lang=lang)
+    if len(sys.argv) != 2:
+        sys.stderr.write('Usage: python tesseract.py input_file\n')
+        exit(1)
     else:
-        sys.stderr.write('Usage: python tesseract.py [-l language] input_file\n')
-        exit(2)
+        image = Image.open(sys.argv[1])
+        print image_to_string(image)
 
