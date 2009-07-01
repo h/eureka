@@ -409,7 +409,7 @@ class EurekaFormElement(EurekaElement):
                 continue
 
             if regex1 and not re.search(regex1, cur_option.value) or \
-               regex2 and not re.search(regex2, cur_option.text):
+               regex2 and not re.search(regex2, normalize_spaces(cur_option.text or '')):
                 continue # skip to the next iteration if regexes don't match
 
             field.value = cur_option.value
