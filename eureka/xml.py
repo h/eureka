@@ -89,7 +89,7 @@ class EurekaElement(etree.ElementBase):
         result = self.select(_path, join_function=join_function, *args, **kwargs)
         return convert_to_text(result)
 
-    def xpath(self, _path, namespaces=None, *args, **kwargs):
+    def xpath(self, _path, namespaces=None, smart_strings=False, *args, **kwargs):
         '''
         gives us access to our pre-defined namespaces
         e=http://schedulizer.com/eureka, eureka=http://schedulizer.com/eureka
@@ -104,7 +104,8 @@ class EurekaElement(etree.ElementBase):
         namespaces['eureka'] = 'http://schedulizer.com/eureka'
         namespaces['re'] = 'http://exslt.org/regular-expressions'
         try:
-            return etree.ElementBase.xpath(self, _path, namespaces=namespaces, *args, **kwargs)
+	    return etree.ElementBase.xpath(self, _path, namespaces=namespaces,
+                                           smart_strings=False, *args, **kwargs)
         except etree.XPathError, e:
             raise EurekaXPathError(self,
                 '\n\n  Error for xpath expression: "%s".\n'
