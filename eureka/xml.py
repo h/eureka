@@ -89,7 +89,7 @@ class EurekaElement(etree.ElementBase):
         result = self.select(_path, join_function=join_function, *args, **kwargs)
         return convert_to_text(result)
 
-    def xpath(self, _path, namespaces=None, smart_strings=False, *args, **kwargs):
+    def xpath(self, _path, namespaces=None, *args, **kwargs):
         '''
         gives us access to our pre-defined namespaces
         e=http://schedulizer.com/eureka, eureka=http://schedulizer.com/eureka
@@ -104,8 +104,7 @@ class EurekaElement(etree.ElementBase):
         namespaces['eureka'] = 'http://schedulizer.com/eureka'
         namespaces['re'] = 'http://exslt.org/regular-expressions'
         try:
-	    return etree.ElementBase.xpath(self, _path, namespaces=namespaces,
-                                           smart_strings=False, *args, **kwargs)
+            return etree.ElementBase.xpath(self, _path, namespaces=namespaces, *args, **kwargs)
         except etree.XPathError, e:
             raise EurekaXPathError(self,
                 '\n\n  Error for xpath expression: "%s".\n'
@@ -249,6 +248,11 @@ class EurekaSelectElement(EurekaElement):
         return iter(html._options_xpath(self))
 
     @property
+    def value_options(self):
+        ''' returns the possible values this SELECT element can be set to '''
+        return [option.value for option in self.options]
+
+    @property
     def options_dict(self):
         '''
         a mapping that maps values to the corresponding option element with
@@ -358,12 +362,8 @@ class EurekaFormElement(EurekaElement):
 
         '''
 
-        for option_list in self.iterate_options(*args):
-            # if only one argument is specified, option_list is actually a single option, not a list
-            if len(args) == 1:
-                yield option_list.value
-            else:
-                yield tuple(option.value for option in option_list)
+        for option in self.iterate_options(*args):
+            yield option.value
 
     def iterate_options(self, *args):
         '''
@@ -410,7 +410,7 @@ class EurekaFormElement(EurekaElement):
                 continue
 
             if regex1 and not re.search(regex1, cur_option.value) or \
-               regex2 and not re.search(regex2, normalize_spaces(cur_option.text or '')):
+               regex2 and not re.search(regex2, cur_option.text):
                 continue # skip to the next iteration if regexes don't match
 
             field.value = cur_option.value

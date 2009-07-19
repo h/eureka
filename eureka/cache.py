@@ -8,7 +8,6 @@ import urllib
 import urllib2
 import httplib
 from StringIO import StringIO
-from sqlite3 import Binary
 
 from eureka import EurekaException
 from eureka.misc import urldecode
@@ -50,7 +49,7 @@ class Cache(urllib2.BaseHandler):
 
                 url VARCHAR(1024) NOT NULL,
                 postdata BLOB,
-                headers TEXT NOT NULL,
+                headers BLOB NOT NULL,
                 cache_control VARCHAR(128) NOT NULL,
 
                 response_url VARCHAR(1024) NOT NULL,
@@ -90,23 +89,27 @@ class Cache(urllib2.BaseHandler):
         ''' helper method for Cache.fetch() '''
 
         cursor = self.connection.cursor()
-        if postdata is None:
-            ifnull_postdata = ''
+        if postdata is not None:
+            cursor.execute('''
+            SELECT
+                response_url, response_code, response_message,
+                response_data
+            FROM
+                cache
+            WHERE
+                url = ? and postdata = ? and headers = ? and cache_control = ?
+            ''', (url, postdata, headers, cache_control))
         else:
-            ifnull_postdata = postdata
-
-        cursor.execute('''
-        SELECT
-            response_url, response_code, response_message,
-            response_data
-        FROM
-            cache
-        WHERE
-    	    url = ? and postdata IS NULL = ? and
-            CAST(IFNULL(postdata, '') AS BLOB) = ? and
-            headers = ? and cache_control = ?
-	''', (url, postdata is None, Binary(ifnull_postdata), headers,
-              cache_control))
+            cursor.execute('''
+            SELECT
+                response_url, response_code, response_message,
+                response_data
+            FROM
+                cache
+            WHERE
+                url = ? and postdata IS NULL and headers = ? and
+                cache_control = ?
+            ''', (url, headers, cache_control))
 
         result = cursor.fetchall()
         cursor.close()
@@ -155,10 +158,6 @@ class Cache(urllib2.BaseHandler):
 
             url = request.get_full_url()
             postdata = request.get_data()
-            if postdata is None:
-                binary_postdata = None
-            else:
-                binary_postdata = Binary(postdata)
             headers = _serialize_headers(request.header_items())
             cache_control = getattr(request, 'cache_control', '') or ''
 
@@ -180,8 +179,8 @@ class Cache(urllib2.BaseHandler):
                  response_code, response_message, response_data)
             VALUES
                 (datetime('now'), ?, ?, ?, ?, ?, ?, ?, ?)
-	    ''', (url, binary_postdata, headers, cache_control, response_url,
-                  response_code, response_message, Binary(text)))
+            ''', (url, postdata, headers, cache_control, response_url,
+                  response_code, response_message, text))
             self.connection.commit()
             cursor.close()
 
