@@ -249,11 +249,6 @@ class EurekaSelectElement(EurekaElement):
         return iter(html._options_xpath(self))
 
     @property
-    def value_options(self):
-        ''' returns the possible values this SELECT element can be set to '''
-        return [option.value for option in self.options]
-
-    @property
     def options_dict(self):
         '''
         a mapping that maps values to the corresponding option element with

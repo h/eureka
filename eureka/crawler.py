@@ -152,10 +152,6 @@ class Crawler():
                 http = partial(self._open_http, headers=headers,
                                cache_control=cache_control)
                 return html.submit_form(url, extra_values=data, open_http=http)
-            else:
-                raise ValueError('Crawler.fetch expects url of type '
-                                 '<basestring> or <FormElement>. Got: %s'
-                                 % type(url))
 
         # check robots.txt to make sure the page isn't disallowed!
         if not self.can_fetch(url, self.user_agent, silent=self.silent):
