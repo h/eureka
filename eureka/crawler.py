@@ -6,6 +6,7 @@ from functools import partial
 from random import random
 from eureka.misc import urldecode, short_repr
 from sys import stdout
+from eureka.pdf import pdftohtml
 
 # in case we want to be firefox... don't do this
 firefox_user_agent = 'Mozilla/5.0 (Windows; U; Windows NT 5.0; en-US; ' \
@@ -233,6 +234,24 @@ class Crawler():
 
         return etree.parse(self.fetch(*args, **kwargs),
                            parser=xml_parser).getroot()
+
+    def fetch_pdf(self, command=None, xml=None, extra_args=None, *args, **kwargs):
+        '''
+        Fetches a pdf file, and returns it as converted into xml or html. This
+        requires pdftohtml to be installed; see eureka/pdf.html.
+
+        The arguments `command`, `xml` and `extra_args` have the same meaning
+        as in pdftohtml in eureka/pdf.py
+
+        '''
+
+        with self.fetch(*args, **kwargs) as fp:
+            converter_args = {}
+            if xml is not None:        converter_args['xml'] = xml
+            if command is not None:    converter_args['command'] = command
+            if extra_args is not None: converter_args['extra_args'] = extra_args
+
+            return pdftohtml(fp, **converter_args)
 
     def fetch_xhtml(self, *args, **kwargs):
         '''
