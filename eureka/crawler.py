@@ -232,8 +232,10 @@ class Crawler():
         from eureka.xml import xml_parser
         from lxml import etree
 
-        return etree.parse(self.fetch(*args, **kwargs),
-                           parser=xml_parser).getroot()
+        with self.fetch(*args, **kwargs) as fp:
+            result = etree.parse(fp, parser=xml_parser).getroot()
+            result.make_links_absolute(fp.geturl())
+            return result
 
     def fetch_pdf(self, command=None, xml=None, extra_args=None, *args, **kwargs):
         '''
@@ -262,10 +264,10 @@ class Crawler():
         from eureka.xml import xhtml_parser
         from lxml import etree
 
-        data = self.fetch(*args, **kwargs)
-        result = etree.parse(data, parser=xhtml_parser).getroot()
-        result.make_links_absolute(data.geturl())
-        return result
+        with self.fetch(*args, **kwargs) as fp:
+            result = etree.parse(fp, parser=xhtml_parser).getroot()
+            result.make_links_absolute(fp.geturl())
+            return result
 
     def fetch_html(self, *args, **kwargs):
         '''
@@ -276,10 +278,10 @@ class Crawler():
         from eureka.xml import html_parser
         from lxml import etree
 
-        data = self.fetch(*args, **kwargs)
-        result = etree.parse(data, parser=html_parser).getroot()
-        result.make_links_absolute(data.geturl())
-        return result
+        with self.fetch(*args, **kwargs) as fp:
+            result = etree.parse(fp, parser=html_parser).getroot()
+            result.make_links_absolute(fp.geturl())
+            return result
 
     def fetch_broken_html(self, *args, **kwargs):
         '''
@@ -291,11 +293,11 @@ class Crawler():
         from lxml.html import soupparser
         from eureka.xml import html_parser
 
-        data = self.fetch(*args, **kwargs)
-        result = soupparser.parse(data,
+        with self.fetch(*args, **kwargs) as fp:
+            result = soupparser.parse(fp,
                      makeelement=html_parser.makeelement).getroot()
-        result.make_links_absolute(data.geturl())
-        return result
+            result.make_links_absolute(fp.geturl())
+            return result
 
 def add_parameters_to_url(url, values):
     '''
