@@ -203,6 +203,8 @@ class Crawler():
                     if not self.silent:
                         print 'done'
 
+                result.__enter__ = lambda: result
+                result.__exit__ = lambda x,y,z: result.close()
                 return result
             except urllib2.HTTPError, e:
                 # if many errors happen, retain the first one
@@ -237,7 +239,7 @@ class Crawler():
             result.make_links_absolute(fp.geturl())
             return result
 
-    def fetch_pdf(self, command=None, xml=None, extra_args=None, *args, **kwargs):
+    def fetch_pdf(self, url, command=None, xml=None, extra_args=None, *args, **kwargs):
         '''
         Fetches a pdf file, and returns it as converted into xml or html. This
         requires pdftohtml to be installed; see eureka/pdf.html.
@@ -247,7 +249,7 @@ class Crawler():
 
         '''
 
-        with self.fetch(*args, **kwargs) as fp:
+        with self.fetch(url, *args, **kwargs) as fp:
             converter_args = {}
             if xml is not None:        converter_args['xml'] = xml
             if command is not None:    converter_args['command'] = command

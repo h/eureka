@@ -6,8 +6,6 @@ from __future__ import with_statement
 from tempfile import NamedTemporaryFile
 from subprocess import Popen, PIPE
 
-from eureka.xml import xml_parser
-
 class PDFException(Exception): pass
 
 def pdftohtml(fp, command='pdftohtml', xml=True, extra_args=[]):
@@ -17,6 +15,9 @@ def pdftohtml(fp, command='pdftohtml', xml=True, extra_args=[]):
     arguments that are passed to the `pdftohtml` command.
 
     '''
+
+    from lxml import etree
+    from eureka.xml import xml_parser
 
     with NamedTemporaryFile(suffix='.pdf') as tempfile:
         tempfile.write(fp.read())
