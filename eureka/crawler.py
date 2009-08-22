@@ -1,3 +1,5 @@
+from __future__ import with_statement
+
 import urllib2
 import urllib
 import urlparse
@@ -6,6 +8,7 @@ from functools import partial
 from random import random
 from eureka.misc import urldecode, short_repr
 from sys import stdout
+from eureka.pdf import pdftohtml
 
 # in case we want to be firefox... don't do this
 firefox_user_agent = 'Mozilla/5.0 (Windows; U; Windows NT 5.0; en-US; ' \
@@ -202,6 +205,8 @@ class Crawler():
                     if not self.silent:
                         print 'done'
 
+                result.__enter__ = lambda: result
+                result.__exit__ = lambda x,y,z: result.close()
                 return result
             except urllib2.HTTPError, e:
                 # if many errors happen, retain the first one
@@ -231,8 +236,28 @@ class Crawler():
         from eureka.xml import xml_parser
         from lxml import etree
 
-        return etree.parse(self.fetch(*args, **kwargs),
-                           parser=xml_parser).getroot()
+        with self.fetch(*args, **kwargs) as fp:
+            result = etree.parse(fp, parser=xml_parser).getroot()
+            result.make_links_absolute(fp.geturl())
+            return result
+
+    def fetch_pdf(self, url, command=None, xml=None, extra_args=None, *args, **kwargs):
+        '''
+        Fetches a pdf file, and returns it as converted into xml or html. This
+        requires pdftohtml to be installed; see eureka/pdf.html.
+
+        The arguments `command`, `xml` and `extra_args` have the same meaning
+        as in pdftohtml in eureka/pdf.py
+
+        '''
+
+        with self.fetch(url, *args, **kwargs) as fp:
+            converter_args = {}
+            if xml is not None:        converter_args['xml'] = xml
+            if command is not None:    converter_args['command'] = command
+            if extra_args is not None: converter_args['extra_args'] = extra_args
+
+            return pdftohtml(fp, **converter_args)
 
     def fetch_xhtml(self, *args, **kwargs):
         '''
@@ -243,10 +268,10 @@ class Crawler():
         from eureka.xml import xhtml_parser
         from lxml import etree
 
-        data = self.fetch(*args, **kwargs)
-        result = etree.parse(data, parser=xhtml_parser).getroot()
-        result.make_links_absolute(data.geturl())
-        return result
+        with self.fetch(*args, **kwargs) as fp:
+            result = etree.parse(fp, parser=xhtml_parser).getroot()
+            result.make_links_absolute(fp.geturl())
+            return result
 
     def fetch_html(self, *args, **kwargs):
         '''
@@ -257,10 +282,10 @@ class Crawler():
         from eureka.xml import html_parser
         from lxml import etree
 
-        data = self.fetch(*args, **kwargs)
-        result = etree.parse(data, parser=html_parser).getroot()
-        result.make_links_absolute(data.geturl())
-        return result
+        with self.fetch(*args, **kwargs) as fp:
+            result = etree.parse(fp, parser=html_parser).getroot()
+            result.make_links_absolute(fp.geturl())
+            return result
 
     def fetch_broken_html(self, *args, **kwargs):
         '''
@@ -272,11 +297,11 @@ class Crawler():
         from lxml.html import soupparser
         from eureka.xml import html_parser
 
-        data = self.fetch(*args, **kwargs)
-        result = soupparser.parse(data,
+        with self.fetch(*args, **kwargs) as fp:
+            result = soupparser.parse(fp,
                      makeelement=html_parser.makeelement).getroot()
-        result.make_links_absolute(data.geturl())
-        return result
+            result.make_links_absolute(fp.geturl())
+            return result
 
 def add_parameters_to_url(url, values):
     '''
