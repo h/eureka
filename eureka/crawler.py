@@ -231,13 +231,18 @@ class Crawler():
         '''
         Makes a request to ``url`` and returns the result parsed as xml.
 
+        A keyword argument ``encoding`` can be specified to override the page's
+        default encoding.
+
         '''
 
-        from eureka.xml import xml_parser
+        from eureka.xml import XMLParser
         from lxml import etree
 
+        encoding = kwargs.pop('encoding', None)
+
         with self.fetch(*args, **kwargs) as fp:
-            result = etree.parse(fp, parser=xml_parser).getroot()
+            result = etree.parse(fp, parser=XMLParser(encoding=encoding)).getroot()
             result.make_links_absolute(fp.geturl())
             return result
 
@@ -263,13 +268,18 @@ class Crawler():
         '''
         Like ``fetch_xml``, but we expect an XHTML response.
 
+        A keyword argument ``encoding`` can be specified to override the page's
+        default encoding.
+
         '''
 
-        from eureka.xml import xhtml_parser
+        from eureka.xml import XHTMLParser
         from lxml import etree
 
+        encoding = kwargs.pop('encoding', None)
+
         with self.fetch(*args, **kwargs) as fp:
-            result = etree.parse(fp, parser=xhtml_parser).getroot()
+            result = etree.parse(fp, parser=XHTMLParser(encoding=encoding)).getroot()
             result.make_links_absolute(fp.geturl())
             return result
 
@@ -277,13 +287,18 @@ class Crawler():
         '''
         Like ``fetch_xml``, but we expect an HTML response.
 
+        A keyword argument ``encoding`` can be specified to override the page's
+        default encoding.
+
         '''
 
-        from eureka.xml import html_parser
+        from eureka.xml import HTMLParser
         from lxml import etree
 
+        encoding = kwargs.pop('encoding', None)
+
         with self.fetch(*args, **kwargs) as fp:
-            result = etree.parse(fp, parser=html_parser).getroot()
+            result = etree.parse(fp, parser=HTMLParser(encoding=encoding)).getroot()
             result.make_links_absolute(fp.geturl())
             return result
 
@@ -295,11 +310,11 @@ class Crawler():
         '''
 
         from lxml.html import soupparser
-        from eureka.xml import html_parser
+        from eureka.xml import HTMLParser
 
         with self.fetch(*args, **kwargs) as fp:
             result = soupparser.parse(fp,
-                     makeelement=html_parser.makeelement).getroot()
+                     makeelement=HTMLParser().makeelement).getroot()
             result.make_links_absolute(fp.geturl())
             return result
 

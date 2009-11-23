@@ -437,20 +437,25 @@ html_parser_lookup = html.HtmlElementClassLookup(
                 ('select', EurekaSelectElement), ('input', EurekaInputElement),
                 ('*', EurekaElement),))
 
-xml_parser = etree.XMLParser()
-xml_parser.setElementClassLookup(xml_parser_lookup)
+class XMLParser(etree.XMLParser):
+    def __init__(self, *args, **kwargs):
+        super(XMLParser, self).__init__(*args, **kwargs)
+        self.setElementClassLookup(xml_parser_lookup)
 
-html_parser = etree.HTMLParser()
-html_parser.setElementClassLookup(html_parser_lookup)
+class HTMLParser(etree.HTMLParser):
+    def __init__(self, *args, **kwargs):
+        super(HTMLParser, self).__init__(*args, **kwargs)
+        self.setElementClassLookup(html_parser_lookup)
+etree.set_default_parser(HTMLParser())
 
-xhtml_parser = etree.XMLParser()
-xhtml_parser.setElementClassLookup(html_parser_lookup)
+class XHTMLParser(etree.XMLParser):
+    def __init__(self, *args, **kwargs):
+        super(XHTMLParser, self).__init__(*args, **kwargs)
+        self.setElementClassLookup(html_parser_lookup)
 
-XML = lambda string: etree.fromstring(string, parser=xml_parser)
-HTML = lambda string: html.fromstring(string,
-                                      parser=html_parser)
-XHTML = lambda string: html.fromstring(string,
-                                       parser=xhtml_parser)
+XML = lambda string:   etree.fromstring(string, parser=XMLParser())
+HTML = lambda string:  html.fromstring(string,  parser=HTMLParser())
+XHTML = lambda string: html.fromstring(string,  parser=XHTMLParser())
 
 # {{{ lxml Hack
 # this is a hack to get field dictionaries to display nicely
@@ -519,9 +524,9 @@ class XPathNamespace(object):
             else:
                 result = value(arg, *args)
                 if isinstance(result, basestring):
-                    # Hack around but in lxml. Sigh. Fix this once lxml
+                    # Hack around bug in lxml. Sigh. Fix this once lxml
                     # gets fixed.
-                    tmp = xml_parser.makeelement('text')
+                    tmp = XMLParser().makeelement('text')
                     tmp.text = result
                     result = tmp
 

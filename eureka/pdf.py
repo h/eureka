@@ -17,7 +17,7 @@ def pdftohtml(fp, command='pdftohtml', xml=True, extra_args=[]):
     '''
 
     from lxml import etree
-    from eureka.xml import xml_parser
+    from eureka.xml import XMLParser
 
     with NamedTemporaryFile(suffix='.pdf') as tempfile:
         tempfile.write(fp.read())
@@ -29,7 +29,7 @@ def pdftohtml(fp, command='pdftohtml', xml=True, extra_args=[]):
         cmdline.append(tempfile.name)
 
         proc = Popen(args=cmdline, stdout=PIPE)
-        xml = etree.parse(proc.stdout, parser=xml_parser).getroot()
+        xml = etree.parse(proc.stdout, parser=XMLParser()).getroot()
         returncode = proc.wait()
 
         if returncode != 0:
