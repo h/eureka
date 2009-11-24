@@ -243,7 +243,6 @@ class Crawler():
 
         with self.fetch(*args, **kwargs) as fp:
             result = etree.parse(fp, parser=XMLParser(encoding=encoding)).getroot()
-            result.make_links_absolute(fp.geturl())
             return result
 
     def fetch_pdf(self, url, command=None, xml=None, extra_args=None, *args, **kwargs):
