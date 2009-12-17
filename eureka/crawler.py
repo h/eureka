@@ -40,7 +40,7 @@ class Crawler():
     '''
 
     def __init__(self, cookies=True, user_agent=default_user_agent,
-                 delay=0, retries=0, cache=True, silent=False, robotstxt=True):
+            delay=0, retries=0, cache=True, silent=False, robotstxt=True):
 
         # if robotstxt is True, we make sure that no page we fetch is
         # disallowed in the robots.txt of the site
