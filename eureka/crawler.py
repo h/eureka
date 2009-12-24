@@ -53,7 +53,8 @@ class Crawler():
         http_processors = ()
 
         if cache is True: # yes, this is correct
-            from eureka.cache import cache
+            from eureka.cache import Cache
+            cache = Cache()
 
         if cache:
             self.cache = cache
@@ -342,4 +343,3 @@ def add_parameters_to_url(url, values):
     return urlparse.urlunparse((scheme, netloc, path, params, query, fragment))
 
 crawler = Crawler()
-default_crawler = crawler

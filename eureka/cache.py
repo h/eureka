@@ -224,4 +224,3 @@ def _serialize_headers(header_items):
     # ignore case for the header type
     return urllib.urlencode(sorted(lower_headers))
 
-cache = Cache()
