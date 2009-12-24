@@ -53,8 +53,7 @@ class Crawler():
         http_processors = ()
 
         if cache is True: # yes, this is correct
-            from eureka.cache import Cache
-            cache = Cache()
+            from eureka.cache import cache
 
         if cache:
             self.cache = cache
