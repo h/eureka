@@ -8,6 +8,7 @@ from eureka.misc import once
 from lxml import etree
 from lxml import html
 import sys
+from time import sleep
 
 class EurekaXPathError(etree.XPathError, EurekaException):
     def __init__(self, xml, message):
@@ -24,6 +25,9 @@ def _input_or_quit():
         print "Can't get keyboard input. Quitting..."
         sys.exit(2)
     else:
+        sys.stdout.flush()
+        sys.stderr.flush()
+        sleep(0.5)
         response = raw_input('Continue running script? [Y]/n: ')
         if response.lower().strip() == 'n':
             sys.exit(2)
