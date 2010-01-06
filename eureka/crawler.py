@@ -119,7 +119,7 @@ class Crawler():
                               **extra_args)
 
     def fetch(self, url, data=None, headers={}, referer=True,
-              cache_control=None):
+              cache_control=None, retries=None):
         '''
         Fetches the data at the given url. If ``data`` is ``None``, we use
         a GET request, otherwise, we use a POST request.
@@ -132,6 +132,9 @@ class Crawler():
 
         If a ``cache_control`` parameter is specified, only cached pages with
         the same cache_control will be used.
+
+        If a ``retries`` integer argument is specified, page fetches will be
+        retried ``retries`` times on page-load errors.
 
         '''
 
@@ -147,13 +150,15 @@ class Crawler():
                 referer = None
         if referer:
             headers['Referer'] = referer
+        if retries is None:
+            retries = self.retries
 
         # if we are passed a 'form' object in stead of a url, submit the form!
         if not isinstance(url, basestring):
             from lxml import html # don't import lxml.html until we need it!
             if isinstance(url, html.FormElement):
                 http = partial(self._open_http, headers=headers,
-                               cache_control=cache_control)
+                               cache_control=cache_control, retries=retries)
                 return html.submit_form(url, extra_values=data, open_http=http)
             else:
                 raise ValueError('Crawler.fetch expects url of type '
@@ -185,7 +190,7 @@ class Crawler():
 
         # download multiple times in case of url-errors...
         error = None
-        for retry in xrange(self.retries + 1):
+        for retry in xrange(retries + 1):
 
             # let the cache call _wait_for_delay on cache miss
             request.wait_for_delay = self._wait_for_delay
@@ -212,7 +217,7 @@ class Crawler():
                 # if many errors happen, retain the first one
                 error = error or e
                 if not self.silent:
-                    if retry < self.retries:
+                    if retry < retries:
                         print 'retrying ...',
                     else:
                         print 'failed'
