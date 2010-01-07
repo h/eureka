@@ -60,6 +60,23 @@ def short_dict_repr(dictionary, max_len=max_len):
     return result
 # }}} functions related to short_repr
 
+def split_by_comma(string):
+    '''
+    Splits a string apart by commas, making a list.  Also splits apart ranges:
+    1-4 becomes 1, 2, 3, 4
+    '''
+
+    lst = string.split(',')
+    lst_new = []
+    for element in lst:
+        if element.count('-'):
+            start, end = element.split('-')
+            lst_range = range(int(start), int(end))
+            lst_new += lst_range
+        else:
+          lst_new.append(int(element))
+    return lst_new
+
 def urldecode(string):
     ''' opposite of urllib.urlencode '''
 
