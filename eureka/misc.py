@@ -69,6 +69,8 @@ def split_by_comma(string):
     lst = string.split(',')
     lst_new = []
     for element in lst:
+        if not element.strip().replace('-','').isdigit():
+            return None
         if element.count('-'):
             start, end = element.split('-')
             lst_range = range(int(start), int(end))
