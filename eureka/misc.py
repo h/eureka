@@ -74,7 +74,7 @@ def split_by_comma(string):
             if not start.isdigit() or not end.isdigit():
                 return False
             lst_range = range(int(start), int(end))
-            lst_range = [str(x) for x in lst_range)]
+            lst_range = [str(x) for x in lst_range]
             lst_new += lst_range
         else:
           lst_new.append(element)
