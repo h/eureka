@@ -69,14 +69,15 @@ def split_by_comma(string):
     lst = string.split(',')
     lst_new = []
     for element in lst:
-        if not element.strip().replace('-','').isdigit():
-            return None
         if element.count('-'):
             start, end = element.split('-')
+            if not start.isdigit() or not end.isdigit():
+                return False
             lst_range = range(int(start), int(end))
+            lst_range = [str(x) for x in lst_range)]
             lst_new += lst_range
         else:
-          lst_new.append(int(element))
+          lst_new.append(element)
     return lst_new
 
 def urldecode(string):
