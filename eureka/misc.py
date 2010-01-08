@@ -64,6 +64,7 @@ def split_by_comma(string):
     '''
     Splits a string apart by commas, making a list.  Also splits apart ranges:
     1-4 becomes 1, 2, 3, 4
+
     '''
 
     lst = string.split(',')
