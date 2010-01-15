@@ -9,6 +9,7 @@ from random import random
 from eureka.misc import urldecode, short_repr
 from sys import stdout
 from eureka.pdf import pdftohtml
+from copy import copy
 
 # in case we want to be firefox... don't do this
 firefox_user_agent = 'Mozilla/5.0 (Windows; U; Windows NT 5.0; en-US; ' \
@@ -40,7 +41,8 @@ class Crawler():
     '''
 
     def __init__(self, cookies=True, user_agent=default_user_agent,
-            delay=0, retries=0, cache=True, silent=False, robotstxt=True):
+            delay=0, retries=0, cache=True, silent=False, robotstxt=True,
+            verbose=False):
 
         # if robotstxt is True, we make sure that no page we fetch is
         # disallowed in the robots.txt of the site
@@ -79,6 +81,7 @@ class Crawler():
         self.silent = silent
         self.retries = retries
         self.delay = delay
+        self.verbose=verbose
         self.last_request_time = 0
 
     def _wait_for_delay(self):
@@ -118,8 +121,37 @@ class Crawler():
             return self.fetch(add_parameters_to_url(url, values),
                               **extra_args)
 
+    def print_request_verbose(self, request):
+        req = copy(request) # This request object is used for printing, only
+
+        # copied from urllib2.py
+        protocol = req.get_type()
+        meth_name = protocol + '_request'
+        for processor in self.opener.process_request.get(protocol, []):
+            meth = getattr(processor, meth_name)
+            req = meth(req)
+
+        # now print the request...
+        print
+        print req.get_method(), req.get_full_url()
+        for header_name, header_value in req.header_items():
+            print '%s: %s' % (header_name, header_value)
+        if req.data is not None:
+            print 'POSTDATA {'
+            for segment in req.data.split('&'):
+                name, _, value = segment.partition('=')
+                name  = urllib.unquote_plus(name)
+                value = urllib.unquote_plus(value)
+                print '  %s: %s' % (name, value)
+            print '} ...',
+        else:
+            print '...',
+
+        # we need to flush stdout, since we didn't print a newline
+        stdout.flush()
+
     def fetch(self, url, data=None, headers={}, referer=True,
-              cache_control=None, retries=None):
+              cache_control=None, retries=None, verbose=None):
         '''
         Fetches the data at the given url. If ``data`` is ``None``, we use
         a GET request, otherwise, we use a POST request.
@@ -137,6 +169,9 @@ class Crawler():
         retried ``retries`` times on page-load errors.
 
         '''
+
+        if verbose is None:
+            verbose = self.verbose
 
         # determine the correct referer to use
         if referer is True: # yes, this is right
@@ -158,7 +193,8 @@ class Crawler():
             from lxml import html # don't import lxml.html until we need it!
             if isinstance(url, html.FormElement):
                 http = partial(self._open_http, headers=headers,
-                               cache_control=cache_control, retries=retries)
+                               cache_control=cache_control, retries=retries,
+                               verbose=verbose)
                 return html.submit_form(url, extra_values=data, open_http=http)
             else:
                 raise ValueError('Crawler.fetch expects url of type '
@@ -166,7 +202,8 @@ class Crawler():
                                  % type(url))
 
         # check robots.txt to make sure the page isn't disallowed!
-        if not self.can_fetch(url, self.user_agent, silent=self.silent):
+        if not self.can_fetch(url, self.user_agent, silent=self.silent,
+                              verbose=False, retries=0):
             from robotstxt import RobotDisallow
             raise RobotDisallow('Error: URL is disallowed in robots.txt: %s'
                                 % short_repr(url, 80))
@@ -183,10 +220,13 @@ class Crawler():
         # give a status message to the user that we're currently
         # downloading a page
         if not self.silent:
-            print '%s: %s ...' % ((data is None) and 'GET' or 'POST',
-                                 short_repr(url, 48)),
-            # we need to flush stdout, since we didn't print a newline
-            stdout.flush()
+            if verbose:
+                self.print_request_verbose(request)
+            else:
+                print '%s: %s ...' % ((data is None) and 'GET' or 'POST',
+                                     short_repr(url, 48)),
+                # we need to flush stdout, since we didn't print a newline
+                stdout.flush()
 
         # download multiple times in case of url-errors...
         error = None
