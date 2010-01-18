@@ -4,6 +4,7 @@ import re
 from collections import defaultdict
 
 from eureka import EurekaException
+import logging
 from eureka.misc import once
 from lxml import etree
 from lxml import html
@@ -22,7 +23,8 @@ def _input_or_quit():
     '''
 
     if not sys.stdin.isatty():
-        print "Can't get keyboard input. Quitting..."
+        sys.stderr.write("Can't get keyboard input. Quitting...")
+        sys.stderr.flush()
         sys.exit(2)
     else:
         sys.stdout.flush()
@@ -139,8 +141,8 @@ class EurekaElement(etree.ElementBase):
         if not isinstance(filename, basestring):
             filename.flush()
         if wait:
-            print
-            print 'Wrote xml to "%s".' % filename
+            sys.stderr.write('\nWrote xml to "%s".\n' % filename)
+            sys.stderr.flush()
             _input_or_quit()
 
     def open_in_browser(self, browser=None, new=1, wait=True):
@@ -164,12 +166,14 @@ class EurekaElement(etree.ElementBase):
         with NamedTemporaryFile('w+b', suffix='.html', prefix='eureka') as fp:
             self.write(fp, method='html', pretty_print=True, wait=False)
             url = 'file://' + abspath(fp.name).replace(os.path.sep, '/')
-            print 'Opening webbrowser: ',
+            sys.stderr.write('\nOpening webbrowser: ')
+            sys.stderr.flush()
             try:
                 browser = webbrowser.get(browser)
             except Exception:
                 browser = webbrowser.GenericBrowser(browser)
-            print browser.open(url, new=new)
+            sys.stderr.write(browser.open(url, new=new))
+            sys.stderr.flush()
 
             # wait for user input before continuing to run the script. Otherwise,
             # we may end up opening a lot of windows at once!

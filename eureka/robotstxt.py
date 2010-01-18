@@ -1,3 +1,4 @@
+import logging
 import urllib2
 from urlparse import urlsplit
 from robotparser import RobotFileParser
@@ -37,7 +38,7 @@ class RobotsTxt(object):
                     robotstxt.close()
             except (urllib2.HTTPError, urllib2.URLError):
                 if not silent:
-                    print '  Could not fetch robots.txt. This is OK.'
+                    logging.info('  Could not fetch robots.txt. This is OK.')
                 robot_file = None
             self.robot_files[robot_url] = robot_file
         return robot_file
