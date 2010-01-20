@@ -4,12 +4,10 @@ import re
 from collections import defaultdict
 
 from eureka import EurekaException
-import logging
 from eureka.misc import once
 from lxml import etree
 from lxml import html
 import sys
-from time import sleep
 
 class EurekaXPathError(etree.XPathError, EurekaException):
     def __init__(self, xml, message):
@@ -23,13 +21,9 @@ def _input_or_quit():
     '''
 
     if not sys.stdin.isatty():
-        sys.stderr.write("Can't get keyboard input. Quitting...")
-        sys.stderr.flush()
+        print "Can't get keyboard input. Quitting..."
         sys.exit(2)
     else:
-        sys.stdout.flush()
-        sys.stderr.flush()
-        sleep(0.5)
         response = raw_input('Continue running script? [Y]/n: ')
         if response.lower().strip() == 'n':
             sys.exit(2)
@@ -141,8 +135,8 @@ class EurekaElement(etree.ElementBase):
         if not isinstance(filename, basestring):
             filename.flush()
         if wait:
-            sys.stderr.write('\nWrote xml to "%s".\n' % filename)
-            sys.stderr.flush()
+            print
+            print 'Wrote xml to "%s".' % filename
             _input_or_quit()
 
     def open_in_browser(self, browser=None, new=1, wait=True):
@@ -166,14 +160,12 @@ class EurekaElement(etree.ElementBase):
         with NamedTemporaryFile('w+b', suffix='.html', prefix='eureka') as fp:
             self.write(fp, method='html', pretty_print=True, wait=False)
             url = 'file://' + abspath(fp.name).replace(os.path.sep, '/')
-            sys.stderr.write('\nOpening webbrowser: ')
-            sys.stderr.flush()
+            print 'Opening webbrowser: ',
             try:
                 browser = webbrowser.get(browser)
             except Exception:
                 browser = webbrowser.GenericBrowser(browser)
-            sys.stderr.write(browser.open(url, new=new))
-            sys.stderr.flush()
+            print browser.open(url, new=new)
 
             # wait for user input before continuing to run the script. Otherwise,
             # we may end up opening a lot of windows at once!
