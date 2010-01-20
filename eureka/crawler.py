@@ -9,6 +9,8 @@ from random import random
 from eureka.misc import urldecode, short_repr
 from sys import stdout
 from eureka.pdf import pdftohtml
+from copy import copy
+import logging
 
 # in case we want to be firefox... don't do this
 firefox_user_agent = 'Mozilla/5.0 (Windows; U; Windows NT 5.0; en-US; ' \
@@ -40,7 +42,8 @@ class Crawler():
     '''
 
     def __init__(self, cookies=True, user_agent=default_user_agent,
-            delay=0, retries=0, cache=True, silent=False, robotstxt=True):
+            delay=0, retries=0, cache=True, silent=False, robotstxt=True,
+            verbose=False):
 
         # if robotstxt is True, we make sure that no page we fetch is
         # disallowed in the robots.txt of the site
@@ -79,6 +82,7 @@ class Crawler():
         self.silent = silent
         self.retries = retries
         self.delay = delay
+        self.verbose=verbose
         self.last_request_time = 0
 
     def _wait_for_delay(self):
@@ -118,8 +122,79 @@ class Crawler():
             return self.fetch(add_parameters_to_url(url, values),
                               **extra_args)
 
+    def verbose_request_description(self, request):
+        '''
+        More descriptive version of request_string: returns the request string
+        containing the entire URL, HTTP Headers and Postdata.
+
+        '''
+
+        req = copy(request) # This request object is used for formatting, only
+
+        # copied from urllib2.py
+        protocol = req.get_type()
+        meth_name = protocol + '_request'
+        for processor in self.opener.process_request.get(protocol, []):
+            meth = getattr(processor, meth_name)
+            req = meth(req)
+
+        # now create the request description string...
+        result = []
+        _, _, path, query_string, _ = urlparse.urlsplit(req.get_full_url())
+        url = urlparse.urlunsplit(('', '', path, query_string, ''))
+        result.append('%s %s' % (req.get_method(), url))
+        for header_name, header_value in req.header_items():
+            result.append('%s: %s' % (header_name, header_value))
+        # print query string parameters
+        if query_string:
+            result.append('QUERY STRING %s' %
+                          self._postdata_description(query_string))
+        # print POST data
+        if req.data is not None:
+            result.append('POST DATA %s' %
+                          self._postdata_description(req.data))
+
+        return '\n'.join(result)
+
+    def _postdata_description(self, urlencoded):
+        '''
+        Returns a string describing the urlencoded data.
+
+        Eg. "a=b&c=d" would turn into:
+        "{
+           a: b
+           c: d
+         }"
+
+        The string "" is turned into "{}"
+
+        '''
+
+        result = []
+        if not urlencoded:
+            result.append('{}')
+        else:
+            result.append('{')
+            for segment in urlencoded.split('&'):
+                name, _, value = segment.partition('=')
+                name  = urllib.unquote_plus(name)
+                value = urllib.unquote_plus(value)
+                result.append('  %s: %s' % (name, value))
+            result.append('}')
+        return '\n'.join(result)
+
+    def request_description(self, request):
+        '''
+        Returns an abbreviated description of the request, including the
+        request method (GET/POST), as well as an abbreviated url.
+
+        '''
+
+        return '%s: %s' % ((request.data is None) and 'GET' or 'POST',
+                           short_repr(request.get_full_url(), 48))
+
     def fetch(self, url, data=None, headers={}, referer=True,
-              cache_control=None):
+              cache_control=None, retries=None, verbose=None):
         '''
         Fetches the data at the given url. If ``data`` is ``None``, we use
         a GET request, otherwise, we use a POST request.
@@ -133,7 +208,13 @@ class Crawler():
         If a ``cache_control`` parameter is specified, only cached pages with
         the same cache_control will be used.
 
+        If a ``retries`` integer argument is specified, page fetches will be
+        retried ``retries`` times on page-load errors.
+
         '''
+
+        if verbose is None:
+            verbose = self.verbose
 
         # determine the correct referer to use
         if referer is True: # yes, this is right
@@ -147,13 +228,16 @@ class Crawler():
                 referer = None
         if referer:
             headers['Referer'] = referer
+        if retries is None:
+            retries = self.retries
 
         # if we are passed a 'form' object in stead of a url, submit the form!
         if not isinstance(url, basestring):
             from lxml import html # don't import lxml.html until we need it!
             if isinstance(url, html.FormElement):
                 http = partial(self._open_http, headers=headers,
-                               cache_control=cache_control)
+                               cache_control=cache_control, retries=retries,
+                               verbose=verbose)
                 return html.submit_form(url, extra_values=data, open_http=http)
             else:
                 raise ValueError('Crawler.fetch expects url of type '
@@ -161,7 +245,8 @@ class Crawler():
                                  % type(url))
 
         # check robots.txt to make sure the page isn't disallowed!
-        if not self.can_fetch(url, self.user_agent, silent=self.silent):
+        if not self.can_fetch(url, self.user_agent, silent=self.silent,
+                              verbose=False, retries=0):
             from robotstxt import RobotDisallow
             raise RobotDisallow('Error: URL is disallowed in robots.txt: %s'
                                 % short_repr(url, 80))
@@ -177,15 +262,14 @@ class Crawler():
 
         # give a status message to the user that we're currently
         # downloading a page
-        if not self.silent:
-            print '%s: %s ...' % ((data is None) and 'GET' or 'POST',
-                                 short_repr(url, 48)),
-            # we need to flush stdout, since we didn't print a newline
-            stdout.flush()
+        if verbose:
+            request_description = self.verbose_request_description(request)
+        else:
+            request_description = self.request_description(request)
 
         # download multiple times in case of url-errors...
         error = None
-        for retry in xrange(self.retries + 1):
+        for retry in xrange(retries + 1):
 
             # let the cache call _wait_for_delay on cache miss
             request.wait_for_delay = self._wait_for_delay
@@ -200,10 +284,10 @@ class Crawler():
                 # let the user know that we're done downloading
                 if hasattr(result, 'is_from_cache'):
                     if not self.silent:
-                        print 'cached'
+                        logging.info('%s ... cached' % request_description)
                 else:
                     if not self.silent:
-                        print 'done'
+                        logging.info('%s ... done' % request_description)
 
                 result.__enter__ = lambda: result
                 result.__exit__ = lambda x,y,z: result.close()
@@ -212,19 +296,20 @@ class Crawler():
                 # if many errors happen, retain the first one
                 error = error or e
                 if not self.silent:
-                    if retry < self.retries:
-                        print 'retrying ...',
+                    if retry < retries:
+                        logging.info('%s ... retrying' % request_description)
                     else:
-                        print 'failed'
+                        logging.info('%s ... failed' % request_description)
             except urllib2.URLError, e:
                 if not self.silent:
-                    print 'failed'
+                    logging.info('%s ... failed' % request_description)
                 raise e # don't retry downloading page if URLError occurred...
 
         # we can only get here, if an error occurred
-        print '------------------------'
-        print '  HTTP code %s for "%s"' % (error.code, url)
-        print '  With post data "%s"' % data
+        if not self.silent:
+            logging.info('------------------------')
+            logging.info('  HTTP code %s for "%s"' % (error.code, url))
+            logging.info('  With post data "%s"' % data)
         raise error
 
     def fetch_xml(self, *args, **kwargs):
@@ -335,11 +420,9 @@ def add_parameters_to_url(url, values):
         if key not in delete_keys:
             new_query.append((key, value))
     for key, value in values:
-        if key not in delete_keys:
-            new_query.append((key, value))
+        new_query.append((key, value))
 
     query = urllib.urlencode(new_query)
     return urlparse.urlunparse((scheme, netloc, path, params, query, fragment))
 
 crawler = Crawler()
-default_crawler = crawler

@@ -1,3 +1,4 @@
+import logging
 import urllib2
 from urlparse import urlsplit
 from robotparser import RobotFileParser
@@ -24,12 +25,12 @@ class RobotsTxt(object):
         self.robot_files = {}
         self.url_opener = url_opener
 
-    def get_robot(self, robot_url, silent):
+    def get_robot(self, robot_url, silent, *args, **kwargs):
         if robot_url in self.robot_files:
             robot_file = self.robot_files[robot_url]
         else:
             try:
-                robotstxt = self.url_opener(robot_url)
+                robotstxt = self.url_opener(robot_url, *args, **kwargs)
                 try:
                     robot_file = RobotFileParser()
                     robot_file.parse(robotstxt.readlines())
@@ -37,12 +38,12 @@ class RobotsTxt(object):
                     robotstxt.close()
             except (urllib2.HTTPError, urllib2.URLError):
                 if not silent:
-                    print '  Could not fetch robots.txt. This is OK.'
+                    logging.info('  Could not fetch robots.txt. This is OK.')
                 robot_file = None
             self.robot_files[robot_url] = robot_file
         return robot_file
 
-    def can_fetch(self, url, user_agent=None, silent=True):
+    def can_fetch(self, url, user_agent=None, silent=True, *args, **kwargs):
         '''
         Determines whether a given url may be fetched using the given
         user_agent. Downloads the appropriate robots.txt file, as needed.
@@ -56,7 +57,7 @@ class RobotsTxt(object):
         if not user_agent:
             user_agent = '*'
         robot_url = make_robot_url(url)
-        robot = self.get_robot(robot_url, silent)
+        robot = self.get_robot(robot_url, silent, *args, **kwargs)
 
         if robot:
             return robot.can_fetch(user_agent, url)
