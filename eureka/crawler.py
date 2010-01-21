@@ -7,7 +7,7 @@ from time import time, sleep
 from functools import partial
 from random import random
 from eureka.misc import urldecode, short_repr
-from sys import stderr
+from sys import stdout
 from eureka.pdf import pdftohtml
 from copy import copy
 import logging
@@ -284,13 +284,9 @@ class Crawler():
                 # let the user know that we're done downloading
                 if hasattr(result, 'is_from_cache'):
                     if not self.silent:
-                        stderr.write('.')
-                        stderr.flush()
                         logging.info('%s ... cached' % request_description)
                 else:
                     if not self.silent:
-                        stderr.write('.')
-                        stderr.flush()
                         logging.info('%s ... done' % request_description)
 
                 result.__enter__ = lambda: result
