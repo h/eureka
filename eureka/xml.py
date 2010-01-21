@@ -1,5 +1,3 @@
-from __future__ import with_statement
-
 import re
 from collections import defaultdict
 
@@ -110,7 +108,7 @@ class EurekaElement(etree.ElementBase):
         namespaces['eureka'] = 'http://schedulizer.com/eureka'
         namespaces['re'] = 'http://exslt.org/regular-expressions'
         try:
-	    return etree.ElementBase.xpath(self, _path, namespaces=namespaces,
+            return etree.ElementBase.xpath(self, _path, namespaces=namespaces,
                                            smart_strings=False, *args, **kwargs)
         except etree.XPathError, e:
             raise EurekaXPathError(self,

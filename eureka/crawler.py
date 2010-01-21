@@ -1,5 +1,3 @@
-from __future__ import with_statement
-
 import urllib2
 import urllib
 import urlparse
@@ -142,7 +140,7 @@ class Crawler():
         result = []
         _, _, path, query_string, _ = urlparse.urlsplit(req.get_full_url())
         url = urlparse.urlunsplit(('', '', path, query_string, ''))
-        result.append('%s %s' % (req.get_method(), url))
+        result.append('%s %s HTTP/1.1' % (req.get_method(), url))
         for header_name, header_value in req.header_items():
             result.append('%s: %s' % (header_name, header_value))
         # print query string parameters
@@ -154,7 +152,7 @@ class Crawler():
             result.append('POST DATA %s' %
                           self._postdata_description(req.data))
 
-        return '\n'.join(result)
+        return '\n'.join(result) + '\n'
 
     def _postdata_description(self, urlencoded):
         '''
