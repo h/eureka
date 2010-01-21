@@ -29,7 +29,9 @@ class Cache(urllib2.BaseHandler):
         self.database = database
 
     def connection(self):
-        if self._connection:
+        if not self.database:
+            return None
+        elif self._connection:
             return self._connection
         else:
             from eureka.database import connect

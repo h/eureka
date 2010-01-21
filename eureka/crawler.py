@@ -51,7 +51,7 @@ class Crawler():
             from eureka.robotstxt import RobotsTxt
             self.can_fetch = RobotsTxt(self.fetch).can_fetch
         else:
-            self.can_fetch = lambda x,y,silent=False: True
+            self.can_fetch = lambda x,y,silent=False,verbose=False: True
 
         http_processors = ()
 
@@ -246,7 +246,7 @@ class Crawler():
 
         # check robots.txt to make sure the page isn't disallowed!
         if not self.can_fetch(url, self.user_agent, silent=self.silent,
-                              verbose=False, retries=0):
+                              verbose=False):
             from robotstxt import RobotDisallow
             raise RobotDisallow('Error: URL is disallowed in robots.txt: %s'
                                 % short_repr(url, 80))
