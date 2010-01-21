@@ -286,12 +286,12 @@ class Crawler():
                     if not self.silent:
                         stderr.write('.')
                         stderr.flush()
-                        logging.info('%s ... cached' % request_description)
+                        logging.debug('%s ... cached' % request_description)
                 else:
                     if not self.silent:
                         stderr.write('.')
                         stderr.flush()
-                        logging.info('%s ... done' % request_description)
+                        logging.debug('%s ... done' % request_description)
 
                 result.__enter__ = lambda: result
                 result.__exit__ = lambda x,y,z: result.close()
@@ -301,19 +301,18 @@ class Crawler():
                 error = error or e
                 if not self.silent:
                     if retry < retries:
-                        logging.info('%s ... retrying' % request_description)
+                        logging.debug('%s ... retrying' % request_description)
                     else:
-                        logging.info('%s ... failed' % request_description)
+                        logging.debug('%s ... failed' % request_description)
             except urllib2.URLError, e:
                 if not self.silent:
-                    logging.info('%s ... failed' % request_description)
+                    logging.debug('%s ... failed' % request_description)
                 raise e # don't retry downloading page if URLError occurred...
 
         # we can only get here, if an error occurred
         if not self.silent:
-            logging.info('------------------------')
-            logging.info('  HTTP code %s for "%s"' % (error.code, url))
-            logging.info('  With post data "%s"' % data)
+            logging.debug(' => HTTP code %s for "%s"' % (error.code, url))
+            logging.debug(' => With post data "%s"' % data)
         raise error
 
     def fetch_xml(self, *args, **kwargs):
