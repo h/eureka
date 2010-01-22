@@ -2,7 +2,6 @@
 # PATH. In Ubuntu, this is the package poppler-utils, and on windows, it can be
 # downloaded from http://sourceforge.net/projects/pdftohtml/
 
-from __future__ import with_statement
 from tempfile import NamedTemporaryFile
 from subprocess import Popen, PIPE
 

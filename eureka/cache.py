@@ -29,7 +29,9 @@ class Cache(urllib2.BaseHandler):
         self.database = database
 
     def connection(self):
-        if self._connection:
+        if not self.database:
+            return None
+        elif self._connection:
             return self._connection
         else:
             from eureka.database import connect
@@ -102,10 +104,10 @@ class Cache(urllib2.BaseHandler):
         FROM
             cache
         WHERE
-    	    url = ? and postdata IS NULL = ? and
+                url = ? and postdata IS NULL = ? and
             CAST(IFNULL(postdata, '') AS BLOB) = ? and
             headers = ? and cache_control = ?
-	''', (url, postdata is None, Binary(ifnull_postdata), headers,
+        ''', (url, postdata is None, Binary(ifnull_postdata), headers,
               cache_control))
 
         result = cursor.fetchall()
@@ -181,7 +183,7 @@ class Cache(urllib2.BaseHandler):
                  response_code, response_message, response_data)
             VALUES
                 (datetime('now'), ?, ?, ?, ?, ?, ?, ?, ?)
-	    ''', (url, binary_postdata, headers, cache_control, response_url,
+            ''', (url, binary_postdata, headers, cache_control, response_url,
                   response_code, response_message, Binary(text)))
             self.connection.commit()
             cursor.close()
