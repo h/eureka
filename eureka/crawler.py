@@ -1,5 +1,3 @@
-from __future__ import with_statement
-
 import urllib2
 import urllib
 import urlparse
@@ -51,7 +49,7 @@ class Crawler():
             from eureka.robotstxt import RobotsTxt
             self.can_fetch = RobotsTxt(self.fetch).can_fetch
         else:
-            self.can_fetch = lambda x,y,silent=False: True
+            self.can_fetch = lambda x,y,silent=False,verbose=False: True
 
         http_processors = ()
 
@@ -142,7 +140,7 @@ class Crawler():
         result = []
         _, _, path, query_string, _ = urlparse.urlsplit(req.get_full_url())
         url = urlparse.urlunsplit(('', '', path, query_string, ''))
-        result.append('%s %s' % (req.get_method(), url))
+        result.append('%s %s HTTP/1.1' % (req.get_method(), url))
         for header_name, header_value in req.header_items():
             result.append('%s: %s' % (header_name, header_value))
         # print query string parameters
@@ -154,7 +152,7 @@ class Crawler():
             result.append('POST DATA %s' %
                           self._postdata_description(req.data))
 
-        return '\n'.join(result)
+        return '\n'.join(result) + '\n'
 
     def _postdata_description(self, urlencoded):
         '''
@@ -245,7 +243,8 @@ class Crawler():
                                  % type(url))
 
         # check robots.txt to make sure the page isn't disallowed!
-        if not self.can_fetch(url, self.user_agent, silent=self.silent):
+        if not self.can_fetch(url, self.user_agent, silent=self.silent,
+                              verbose=False):
             from robotstxt import RobotDisallow
             raise RobotDisallow('Error: URL is disallowed in robots.txt: %s'
                                 % short_repr(url, 80))
@@ -285,12 +284,12 @@ class Crawler():
                     if not self.silent:
                         stderr.write('.')
                         stderr.flush()
-                        logging.info('%s ... cached' % request_description)
+                        logging.debug('%s ... cached' % request_description)
                 else:
                     if not self.silent:
                         stderr.write('.')
                         stderr.flush()
-                        logging.info('%s ... done' % request_description)
+                        logging.debug('%s ... done' % request_description)
 
                 result.__enter__ = lambda: result
                 result.__exit__ = lambda x,y,z: result.close()
@@ -300,19 +299,18 @@ class Crawler():
                 error = error or e
                 if not self.silent:
                     if retry < retries:
-                        logging.info('%s ... retrying' % request_description)
+                        logging.debug('%s ... retrying' % request_description)
                     else:
-                        logging.info('%s ... failed' % request_description)
+                        logging.debug('%s ... failed' % request_description)
             except urllib2.URLError, e:
                 if not self.silent:
-                    logging.info('%s ... failed' % request_description)
+                    logging.debug('%s ... failed' % request_description)
                 raise e # don't retry downloading page if URLError occurred...
 
         # we can only get here, if an error occurred
         if not self.silent:
-            logging.info('------------------------')
-            logging.info('  HTTP code %s for "%s"' % (error.code, url))
-            logging.info('  With post data "%s"' % data)
+            logging.debug(' => HTTP code %s for "%s"' % (error.code, url))
+            logging.debug(' => With post data "%s"' % data)
         raise error
 
     def fetch_xml(self, *args, **kwargs):
