@@ -26,7 +26,9 @@ def short_string_repr(string, max_len=max_len):
 
     '''
 
-    if isinstance(string, basestring) and len(string) > max_len:
+    if not isinstance(string, basestring):
+        string = repr(string)
+    if len(string) > max_len:
         left_len = (max_len - 3) / 2
         right_len = max_len - left_len - 3
         string = '%s...%s' % (string[:left_len], string[-right_len:])
