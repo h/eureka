@@ -266,6 +266,11 @@ class Crawler():
         else:
             request_description = self.request_description(request)
 
+        if not self.silent:
+            logging.info(request_description)
+            stderr.write('.')
+            stderr.flush()
+
         # download multiple times in case of url-errors...
         error = None
         for retry in xrange(retries + 1):
@@ -283,14 +288,10 @@ class Crawler():
                 # let the user know that we're done downloading
                 if hasattr(result, 'is_from_cache'):
                     if not self.silent:
-                        stderr.write('.')
-                        stderr.flush()
-                        logging.info('%s ... cached' % request_description)
+                        logging.info('.. cached')
                 else:
                     if not self.silent:
-                        stderr.write('.')
-                        stderr.flush()
-                        logging.info('%s ... done' % request_description)
+                        logging.info('.. done')
 
                 result.__enter__ = lambda: result
                 result.__exit__ = lambda x,y,z: result.close()
@@ -300,12 +301,12 @@ class Crawler():
                 error = error or e
                 if not self.silent:
                     if retry < retries:
-                        logging.info('%s ... retrying' % request_description)
+                        logging.info('.. retrying')
                     else:
-                        logging.info('%s ... failed' % request_description)
+                        logging.info('.. failed')
             except urllib2.URLError, e:
                 if not self.silent:
-                    logging.info('%s ... failed' % request_description)
+                    logging.info('.. failed')
                 raise e # don't retry downloading page if URLError occurred...
 
         # we can only get here, if an error occurred
