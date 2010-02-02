@@ -313,7 +313,8 @@ class Crawler():
         # we can only get here, if an error occurred
         if not self.silent:
             logging.debug(' => HTTP code %s for "%s"' % (error.code, url))
-            logging.debug(' => With post data "%s"' % data)
+            if data is not None:
+                logging.debug(' => With post data "%s"' % data)
         raise error
 
     def fetch_xml(self, *args, **kwargs):
