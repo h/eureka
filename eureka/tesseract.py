@@ -65,7 +65,8 @@ def run_tesseract(input_filename, output_filename_base, lang=None):
     if lang is not None:
         command += ['-l', lang]
 
-    proc = subprocess.Popen(command, stderr=subprocess.PIPE)
+    proc = subprocess.Popen(command,
+            stderr=subprocess.PIPE)
     return (proc.wait(), proc.stderr.read())
 
 def cleanup(filename):
