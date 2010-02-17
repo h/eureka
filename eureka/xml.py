@@ -170,7 +170,7 @@ class EurekaElement(etree.ElementBase):
                 browser = webbrowser.get(browser)
             except Exception:
                 browser = webbrowser.GenericBrowser(browser)
-            sys.stderr.write(browser.open(url, new=new))
+            browser.open(url, new=new)
             sys.stderr.flush()
 
             # wait for user input before continuing to run the script. Otherwise,
