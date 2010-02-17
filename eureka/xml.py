@@ -170,7 +170,7 @@ class EurekaElement(etree.ElementBase):
                 browser = webbrowser.get(browser)
             except Exception:
                 browser = webbrowser.GenericBrowser(browser)
-            browser.open(url, new=new)
+            sys.stderr.write(browser.open(url, new=new))
             sys.stderr.flush()
 
             # wait for user input before continuing to run the script. Otherwise,
@@ -481,10 +481,6 @@ class _ElementClasses(object):
 html_parser_lookup._element_classes = _ElementClasses(html_parser_lookup._element_classes)
 # }}} lxml Hack
 
-# don't deepcopy xpath result strings, as they should be immutable, and their
-# parent should _not_ be copied, as this could be very memory intensive and
-# is usually unintended
-etree._ElementStringResult.__deepcopy__ = lambda elem, memo: elem
 
 # XPath/XSLT namespaces
 class XPathNamespace(object):
