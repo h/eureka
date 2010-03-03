@@ -20,6 +20,7 @@ def pdftohtml(fp, command='pdftohtml', xml=True, extra_args=[]):
 
     with NamedTemporaryFile(suffix='.pdf') as tempfile:
         tempfile.write(fp.read())
+        tempfile.flush()
 
         cmdline = [command, '-stdout']
         if xml:
