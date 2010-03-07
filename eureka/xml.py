@@ -280,7 +280,7 @@ class EurekaSelectElement(EurekaElement):
         ... not sure if this is optimal.
 
         """
-
+        
         if self.multiple:
             return EurekaMultipleSelectOptions(self)
         else:
@@ -290,6 +290,8 @@ class EurekaSelectElement(EurekaElement):
                     return el.value
                 if first_option is None:
                     first_option = el
+            if not first_option:
+                return ''
             return first_option.value
 
     def _value__set(self, value):
