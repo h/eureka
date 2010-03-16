@@ -290,7 +290,7 @@ class EurekaSelectElement(EurekaElement):
                     return el.value
                 if first_option is None:
                     first_option = el
-            if not first_option:
+            if first_option is not None:
                 return ''
             return first_option.value
 
