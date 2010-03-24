@@ -280,7 +280,7 @@ class EurekaSelectElement(EurekaElement):
         ... not sure if this is optimal.
 
         """
-        
+
         if self.multiple:
             return EurekaMultipleSelectOptions(self)
         else:
