@@ -251,7 +251,7 @@ class Crawler():
 
         # the post-data needs to be url-encoded if it isn't a string
         if data is not None and not isinstance(data, basestring):
-            data = urllib.urlencode(data)
+            data = urllib.urlencode(data, doseq=1)
 
         # alright, we're ready to download the page!
         request = urllib2.Request(url, data=data, headers=headers)
