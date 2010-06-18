@@ -451,7 +451,7 @@ class EurekaFormElement(EurekaElement):
             name = el.name
             if not name:
                 continue
-            tag = lxml._nons(el.tag)
+            tag = html._nons(el.tag)
             if tag == 'textarea':
                 results.append((name, el.value))
             elif tag == 'select':
