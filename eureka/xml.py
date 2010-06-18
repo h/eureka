@@ -439,6 +439,40 @@ class EurekaFormElement(EurekaElement):
                 else:
                     yield result
 
+    def form_values(self):
+        '''
+        overrides the standard form_values function to include the
+        values of "submit" buttons
+
+        '''
+
+        results = []
+        for el in self.inputs:
+            name = el.name
+            if not name:
+                continue
+            tag = _nons(el.tag)
+            if tag == 'textarea':
+                results.append((name, el.value))
+            elif tag == 'select':
+                value = el.value
+                if el.multiple:
+                    for v in value:
+                        results.append((name, v))
+                elif value is not None:
+                    results.append((name, el.value))
+            else:
+                assert tag == 'input', (
+                    "Unexpected tag: %r" % el)
+                if el.checkable and not el.checked:
+                    continue
+                if el.type in ('image', 'reset'):
+                    continue
+                value = el.value
+                if value is not None:
+                    results.append((name, el.value))
+        return results
+
 xml_parser_lookup = etree.ElementDefaultClassLookup(element=EurekaElement)
 html_parser_lookup = html.HtmlElementClassLookup(
         mixins=(('option', EurekaOptionElement), ('form', EurekaFormElement),
