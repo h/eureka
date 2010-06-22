@@ -7,7 +7,7 @@ from subprocess import Popen, PIPE
 
 class PDFException(Exception): pass
 
-def pdftohtml(fp, command='pdftohtml', xml=True, extra_args=[]):
+def pdftohtml(fp, command=None, xml=True, extra_args=[]):
     '''
     Uses pdftohtml to convert a file-like object fp into an xml or html file
     (depending on the value of the `xml` argument). *args are command-line
@@ -17,6 +17,10 @@ def pdftohtml(fp, command='pdftohtml', xml=True, extra_args=[]):
 
     from lxml import etree
     from eureka.xml import XMLParser
+
+    if not command:
+        from settings import pdf_converter
+        command = pdf_converter
 
     with NamedTemporaryFile(suffix='.pdf') as tempfile:
         tempfile.write(fp.read())
