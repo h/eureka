@@ -4,6 +4,7 @@
 
 from tempfile import NamedTemporaryFile
 from subprocess import Popen, PIPE
+from os import remove
 
 class PDFException(Exception): pass
 
@@ -21,25 +22,28 @@ def pdftohtml(fp, command=None, xml=True, extra_args=[]):
     if not command:
         from settings import pdf_converter
         command = pdf_converter
-
+    
     tempfile = NamedTemporaryFile(suffix='.pdf', delete=False)
-    tempfile.write(fp.read())
-    tempfile.close()
-    cmdline = [command, '-stdout']
-    if xml:
-        cmdline.append('-xml')
-    cmdline.extend(extra_args)
-    cmdline.append(tempfile.name)
+    try:
+        tempfile.write(fp.read())
+        tempfile.close()
+        
+        cmdline = [command, '-stdout']
+        if xml:
+            cmdline.append('-xml')
+        cmdline.extend(extra_args)
+        cmdline.append(tempfile.name)
 
-    proc = Popen(args=cmdline, stdout=PIPE)
-    xml = etree.parse(proc.stdout, parser=XMLParser()).getroot()
-    returncode = proc.wait()
+        proc = Popen(args=cmdline, stdout=PIPE)
+        xml = etree.parse(proc.stdout, parser=XMLParser()).getroot()
+        returncode = proc.wait()
 
-    if returncode != 0:
-        raise PDFException('pdftohtml was unable to convert file from pdf '
-                           'to html. Return code was %s' % returncode)
-    from os import remove
-    remove(tempfile.name)
+        if returncode != 0:
+            raise PDFException('pdftohtml was unable to convert file from'
+                    'pdf to html. Return code was %s' % returncode)
+    finally:
+        tempfile.close()
+        remove(tempfile.name)
 
 
     return xml
