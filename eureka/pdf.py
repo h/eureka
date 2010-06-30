@@ -4,10 +4,11 @@
 
 from tempfile import NamedTemporaryFile
 from subprocess import Popen, PIPE
+from os import remove
 
 class PDFException(Exception): pass
 
-def pdftohtml(fp, command='pdftohtml', xml=True, extra_args=[]):
+def pdftohtml(fp, command=None, xml=True, extra_args=[]):
     '''
     Uses pdftohtml to convert a file-like object fp into an xml or html file
     (depending on the value of the `xml` argument). *args are command-line
@@ -18,10 +19,15 @@ def pdftohtml(fp, command='pdftohtml', xml=True, extra_args=[]):
     from lxml import etree
     from eureka.xml import XMLParser
 
-    with NamedTemporaryFile(suffix='.pdf') as tempfile:
+    if not command:
+        from settings import pdf_converter
+        command = pdf_converter
+    
+    tempfile = NamedTemporaryFile(suffix='.pdf', delete=False)
+    try:
         tempfile.write(fp.read())
-        tempfile.flush()
-
+        tempfile.close()
+        
         cmdline = [command, '-stdout']
         if xml:
             cmdline.append('-xml')
@@ -33,8 +39,12 @@ def pdftohtml(fp, command='pdftohtml', xml=True, extra_args=[]):
         returncode = proc.wait()
 
         if returncode != 0:
-            raise PDFException('pdftohtml was unable to convert file from pdf '
-                               'to html. Return code was %s' % returncode)
+            raise PDFException('pdftohtml was unable to convert file from'
+                    'pdf to html. Return code was %s' % returncode)
+    finally:
+        tempfile.close()
+        remove(tempfile.name)
 
-        return xml
+
+    return xml
 
