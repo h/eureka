@@ -308,12 +308,7 @@ class Crawler():
             except urllib2.URLError, e:
                 if not self.silent:
                     logging.debug('... failed')
-
-                # TODO: test that this is the correct e.message
-                if e.message not in ('Connection refused',):
-                    # don't retry downloading page if a non-http error
-                    # happened
-                    raise e
+                raise e # don't retry downloading page if URLError occurred...
 
         # we can only get here, if an error occurred
         if not self.silent:
