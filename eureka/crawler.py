@@ -123,7 +123,7 @@ class Crawler():
     def verbose_request_description(self, request):
         '''
         More descriptive version of request_string: returns the request string
-        containing the entire URL, HTTP Headers and Postdata.
+        containing the entire URL, HTTP Headers, Postdata and Cookies.
 
         '''
 
