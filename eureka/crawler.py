@@ -10,6 +10,8 @@ from eureka.pdf import pdftohtml
 from copy import copy
 import logging
 
+__all__ = ('firefox_user_agent', 'default_user_agent', 'crawler', 'Crawler')
+
 # in case we want to be firefox... don't do this
 firefox_user_agent = 'Mozilla/5.0 (Windows; U; Windows NT 5.0; en-US; ' \
                      'rv:1.9.0.5) Gecko/2008120122 Firefox/3.0.5'
@@ -34,8 +36,14 @@ class Crawler():
     If ``silent`` is set to False in __init__, the crawler will print the url
     of the downloading page for every request.
 
-    If ``cache`` is set to True, page-loads with be cached with sqlite. See
-    ``eureka.cache``.
+    If ``cache`` is non-Null, page-loads with be cached with sqlite. If it is
+    set to True, the default cache ``eureka.cache.cache`` will be used. To use
+    a non-default cache, set the ``cache`` parameter to a eureka.cache.Cache
+    object.
+
+    If ``cookies`` is set to True, the crawler correctly sets and attaches
+    cookies to its requests. If ``cookies`` is set to a CookieJar object, that
+    CookieJar object is used to store and handle http cookies.
 
     '''
 
@@ -43,31 +51,40 @@ class Crawler():
             delay=0, retries=0, cache=True, silent=False, robotstxt=True,
             verbose=False):
 
-        # if robotstxt is True, we make sure that no page we fetch is
-        # disallowed in the robots.txt of the site
-        if robotstxt:
-            from eureka.robotstxt import RobotsTxt
-            self.can_fetch = RobotsTxt(self.fetch).can_fetch
-        else:
-            self.can_fetch = lambda x,y,silent=False,verbose=False: True
+        http_processors = []
 
-        http_processors = ()
+        if robotstxt:
+            import robotstxt
+            http_processors.append(robotstxt.RobotsTxt())
 
         if cache is True: # yes, this is correct
             from eureka.cache import cache
 
         if cache:
             self.cache = cache
-            http_processors += (cache,)
+            http_processors.append(cache)
         else:
             self.cache = None
 
-        if cookies:
-            import cookielib
-            self.cookies = cookielib.CookieJar()
-            http_processors += (urllib2.HTTPCookieProcessor(self.cookies),)
+        if cookies is not None:
+            if cookies is True:
+                import cookielib
+                self.cookies = cookielib.CookieJar()
+            else:
+                self.cookies = cookies
+            http_processors.append(urllib2.HTTPCookieProcessor(self.cookies))
         else:
             self.cookies = None
+
+        if not silent:
+            # http requests are printed whenever a request is made
+            self._http_request_printer = HTTPRequestPrinter(verbose=verbose)
+            http_processors.append(self._http_request_printer)
+
+        if delay != 0:
+            if isinstance(delay, int) or isinstance(delay, float):
+                delay = (delay,)
+            http_processors.append(HTTPDelay(*delay))
 
         self.opener = urllib2.build_opener(*http_processors)
 
@@ -77,35 +94,7 @@ class Crawler():
         else:
             self.opener.addheaders = []
 
-        self.silent = silent
         self.retries = retries
-        self.delay = delay
-        self.verbose=verbose
-        self.last_request_time = 0
-
-    def _wait_for_delay(self):
-        '''
-        if the last request was less than ``self.delay`` seconds ago, we sleep
-        for a while.
-
-        '''
-
-        # get a random number, if delay is specified as a tuple
-        if isinstance(self.delay, tuple) or isinstance(self.delay, list):
-            start, end = self.delay
-            delay = start + random() * (end-start)
-        else:
-            delay = self.delay
-
-        # figure out how long we need to sleep
-        cur_time = time()
-        sleep_time = self.last_request_time + delay - cur_time
-
-        if sleep_time <= 0:
-            self.last_request_time = cur_time
-        else:
-            sleep(sleep_time)
-            self.last_request_time = time()
 
     def _open_http(self, method, url, values, **extra_args):
         '''
@@ -120,84 +109,16 @@ class Crawler():
             return self.fetch(add_parameters_to_url(url, values),
                               **extra_args)
 
-    def verbose_request_description(self, request):
-        '''
-        More descriptive version of request_string: returns the request string
-        containing the entire URL, HTTP Headers, Postdata and Cookies.
-
-        '''
-
-        req = copy(request) # This request object is used for formatting, only
-
-        # copied from urllib2.py
-        protocol = req.get_type()
-        meth_name = protocol + '_request'
-        for processor in self.opener.process_request.get(protocol, []):
-            meth = getattr(processor, meth_name)
-            req = meth(req)
-
-        # now create the request description string...
-        result = []
-        _, _, path, query_string, _ = urlparse.urlsplit(req.get_full_url())
-        url = urlparse.urlunsplit(('', '', path, query_string, ''))
-        result.append('%s %s HTTP/1.1' % (req.get_method(), url))
-        for header_name, header_value in req.header_items():
-            result.append('%s: %s' % (header_name, header_value))
-        # print query string parameters
-        if query_string:
-            result.append('QUERY STRING %s' %
-                          self._postdata_description(query_string))
-        # print POST data
-        if req.data is not None:
-            result.append('POST DATA %s' %
-                          self._postdata_description(req.data))
-
-        return '\n'.join(result) + '\n'
-
-    def _postdata_description(self, urlencoded):
-        '''
-        Returns a string describing the urlencoded data.
-
-        Eg. "a=b&c=d" would turn into:
-        "{
-           a: b
-           c: d
-         }"
-
-        The string "" is turned into "{}"
-
-        '''
-
-        result = []
-        if not urlencoded:
-            result.append('{}')
-        else:
-            result.append('{')
-            for segment in urlencoded.split('&'):
-                name, _, value = segment.partition('=')
-                name  = urllib.unquote_plus(name)
-                value = urllib.unquote_plus(value)
-                result.append('  %s: %s' % (name, value))
-            result.append('}')
-        return '\n'.join(result)
-
-    def request_description(self, request):
-        '''
-        Returns an abbreviated description of the request, including the
-        request method (GET/POST), as well as an abbreviated url.
-
-        '''
-
-        return '%s: %s' % ((request.data is None) and 'GET' or 'POST',
-                           short_repr(request.get_full_url(), 48))
-
+    # IMPORTANT: if any arguments are added to fetch(), they must be added
+    # below, as well, next to the other "IMPORTANT" comment
     def fetch(self, url, data=None, headers={}, referer=True,
-              cache_control=None, retries=None, verbose=None):
+              cache_control=None, retries=None):
         '''
         Fetches the data at the given url. If ``data`` is ``None``, we use
         a GET request, otherwise, we use a POST request.
 
-        ``data`` can either be a dictionary or a urlencoded string
+        ``data`` can either be a dictionary or a urlencoded string, or an
+        ordered list of two-tuples [('key1','value1'),('key2','value2'), ...]
 
         If ``referer`` is False or empty, we don't send the http referer
         header; otherwise, we send the specified referer. If ``referer`` is
@@ -210,9 +131,6 @@ class Crawler():
         retried ``retries`` times on page-load errors.
 
         '''
-
-        if verbose is None:
-            verbose = self.verbose
 
         # determine the correct referer to use
         if referer is True: # yes, this is right
@@ -233,21 +151,16 @@ class Crawler():
         if not isinstance(url, basestring):
             from lxml import html # don't import lxml.html until we need it!
             if isinstance(url, html.FormElement):
+                # IMPORTANT: if any arguments are added to the fetch()
+                # function, then they must be added here, as well!!!
                 http = partial(self._open_http, headers=headers,
-                               cache_control=cache_control, retries=retries,
-                               verbose=verbose)
+                               referer=referer, cache_control=cache_control,
+                               retries=retries)
                 return html.submit_form(url, extra_values=data, open_http=http)
             else:
                 raise ValueError('Crawler.fetch expects url of type '
                                  '<basestring> or <FormElement>. Got: %s'
                                  % type(url))
-
-        # check robots.txt to make sure the page isn't disallowed!
-        if not self.can_fetch(url, self.user_agent, silent=self.silent,
-                              verbose=False):
-            from robotstxt import RobotDisallow
-            raise RobotDisallow('Error: URL is disallowed in robots.txt: %s'
-                                % short_repr(url, 80))
 
         # the post-data needs to be url-encoded if it isn't a string
         if data is not None and not isinstance(data, basestring):
@@ -258,63 +171,26 @@ class Crawler():
         if cache_control is not None:
             request.cache_control = str(cache_control)
 
-        # give a status message to the user that we're currently
-        # downloading a page
-        if verbose:
-            request_description = self.verbose_request_description(request)
-        else:
-            request_description = self.request_description(request)
-
-        if not self.silent:
-            logging.debug(request_description)
-
         # download multiple times in case of url-errors...
         error = None
         for retry in xrange(retries + 1):
-
-            # let the cache call _wait_for_delay on cache miss
-            request.wait_for_delay = self._wait_for_delay
-            if not self.cache:
-                # if we don't have a chache, we need to call
-                # wait_for_delay ourselves
-                self._wait_for_delay()
-
             try:
                 result = self.opener.open(request)
-
-                # let the user know that we're done downloading
-                if hasattr(result, 'is_from_cache'):
-                    if not self.silent:
-                        stderr.write('.')
-                        stderr.flush()
-                        logging.debug('.. cached')
-                else:
-                    if not self.silent:
-                        stderr.write('.')
-                        stderr.flush()
-                        logging.debug('.. done')
-
                 result.__enter__ = lambda: result
                 result.__exit__ = lambda x,y,z: result.close()
                 return result
+
             except urllib2.HTTPError, e:
                 # if many errors happen, retain the first one
                 error = error or e
-                if not self.silent:
-                    if retry < retries:
-                        logging.debug('... retrying')
-                    else:
-                        logging.debug('... failed')
+
             except urllib2.URLError, e:
-                if not self.silent:
-                    logging.debug('... failed')
-                raise e # don't retry downloading page if URLError occurred...
+                raise e # don't retry if a URLError occurred...
 
         # we can only get here, if an error occurred
-        if not self.silent:
-            logging.warn(' => HTTP code %s for "%s"' % (error.code, url))
-            if data is not None:
-                logging.warn(' => With post data "%s"' % data)
+        if self._http_request_printer:
+            logging.warn(' => HTTP code {0} for:\n{1}\n'.format(error.code,
+                self._http_request_printer.request_description(request)))
         raise error
 
     def fetch_xml(self, *args, **kwargs):
@@ -406,6 +282,140 @@ class Crawler():
                      makeelement=HTMLParser().makeelement).getroot()
             result.make_links_absolute(fp.geturl())
             return result
+
+class HTTPRequestPrinter(urllib2.BaseHandler):
+    '''
+    A URL-handler that prints HTTP requests as they are performed. There are
+    two possible formats:
+
+     - verbose: prints the full HTTP request that will be sent to the server
+     - non-verbose: prints an abbreviation of the request method, as well as
+       the requested URL
+
+    '''
+
+    handler_order = 999 # run this at the very end
+
+    def __init__(self, verbose=False):
+        self.verbose = verbose
+
+    def http_request(self, request):
+        logging.debug(self.request_description(request))
+        return request
+
+    https_request = http_request
+
+    def http_error_default(self, req, fp, code, message, headers):
+        stderr.write('.')
+        stderr.flush()
+        logging.debug('.. failed')
+
+    def http_response(self, request, response):
+
+        # write first dot to stderr, so it is printed when logging is disabled
+        stderr.write('.')
+        stderr.flush()
+
+        if hasattr(response, 'is_from_cache'):
+            logging.debug('.. cached')
+        elif 300 <= response.code < 400:
+            logging.debug('.. redirect')
+        else:
+            logging.debug('.. done')
+        return response
+
+    https_response = http_response
+
+    def request_description(self, request):
+        if self.verbose:
+            return HTTPRequestPrinter.verbose_request_description(request)
+        else:
+            return HTTPRequestPrinter.basic_request_description(request)
+
+    @staticmethod
+    def basic_request_description(request):
+        '''
+        Returns an abbreviated description of the request, including the
+        request method (GET/POST), as well as an abbreviated url.
+
+        '''
+
+        return '%s: %s' % ((request.data is None) and 'GET' or 'POST',
+                           short_repr(request.get_full_url(), 48))
+
+    @staticmethod
+    def verbose_request_description(request):
+        '''
+        Returns the entire HTTP request the way it is sent to the server.
+
+        '''
+
+        result = []
+        _, _, path, query_string, _ = \
+                urlparse.urlsplit(request.get_full_url())
+        path = path or '/' # the empty path is actually a "/" path in HTTP!
+        url = urlparse.urlunsplit(('', '', path, query_string, ''))
+        result.append('%s %s HTTP/1.1' % (request.get_method(), url))
+        for header_name, header_value in request.header_items():
+            result.append('%s: %s' % (header_name, header_value))
+
+        # print post data, if the request has any
+        if request.data is not None:
+            result.append('')
+            result.append(request.data)
+
+        result.append('') # end the output with a newline
+        return '\n'.join(result)
+
+class HTTPDelay(urllib2.BaseHandler):
+    ''' This handler causes a delay before each http request. '''
+
+    # run this after the cache, so we don't cause delays when a page is cached
+    handler_order = 301
+
+    def __init__(self, min_delay, max_delay=None):
+        '''
+        The delay is a random number between min_delay and max_delay. If
+        max_delay is not set, it will be set to be equal to the min_delay.
+
+        '''
+
+        self.last_request_time = 0
+        self.min_delay = min_delay
+
+        if max_delay is None:
+            self.max_delay = min_delay
+        else:
+            if max_delay < min_delay:
+                raise ValueError('max_delay must be larger than min_delay')
+            self.max_delay = max_delay
+
+    def http_open(self, request):
+        '''
+        If the last request was less than ``self.delay`` seconds ago, we sleep
+        for a while.
+
+        '''
+
+        # get a random number, if delay is specified as a tuple
+        if self.min_delay != self.max_delay:
+            delay = self.min_delay \
+                  + random() * (self.max_delay-self.min_delay)
+        else:
+            delay = self.delay
+
+        # figure out how long we need to sleep
+        cur_time = time()
+        sleep_time = self.last_request_time + delay - cur_time
+
+        if sleep_time <= 0:
+            self.last_request_time = cur_time
+        else:
+            sleep(sleep_time)
+            self.last_request_time = time()
+
+    https_open = http_open
+
 
 def add_parameters_to_url(url, values):
     '''

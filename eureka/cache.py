@@ -138,11 +138,6 @@ class Cache(urllib2.BaseHandler):
                 url, code, msg, data = results[0]
                 response = _make_response(url, code, msg, data)
 
-        # if the cache missed, we need to delay before the next http request
-        # XXX: this is a hack; this should go in eureka/crawler.py
-        if response is None and hasattr(request, 'wait_for_delay'):
-            request.wait_for_delay()
-
         return response
 
     def http_response(self, request, response):
