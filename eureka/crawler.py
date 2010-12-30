@@ -185,7 +185,14 @@ class Crawler():
                 error = error or e
 
             except urllib2.URLError, e:
-                raise e # don't retry if a URLError occurred...
+                # check whether we should re-try fetching the page
+                if e.reason.strerror not in ('Connection refused',):
+                    # don't retry downloading page if a non-http error
+                    # happened
+                    raise e
+                else:
+                    # if many errors happen, retain the first one
+                    error = error or e
 
         # we can only get here, if an error occurred
         if self._http_request_printer:
