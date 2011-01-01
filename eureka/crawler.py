@@ -6,7 +6,6 @@ from functools import partial
 from random import random
 from eureka.misc import urldecode, short_repr
 from sys import stderr
-from eureka.pdf import pdftohtml
 from copy import copy
 import logging
 
@@ -195,9 +194,6 @@ class Crawler():
                     error = error or e
 
         # we can only get here, if an error occurred
-        if self._http_request_printer:
-            logging.warn(' => HTTP code {0} for:\n{1}\n'.format(error.code,
-                self._http_request_printer.request_description(request)))
         raise error
 
     def fetch_xml(self, *args, **kwargs):
@@ -227,6 +223,8 @@ class Crawler():
         as in pdftohtml in eureka/pdf.py
 
         '''
+
+        from eureka.pdf import pdftohtml
 
         with self.fetch(url, *args, **kwargs) as fp:
             converter_args = {}
@@ -422,7 +420,6 @@ class HTTPDelay(urllib2.BaseHandler):
             self.last_request_time = time()
 
     https_open = http_open
-
 
 def add_parameters_to_url(url, values):
     '''
