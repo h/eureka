@@ -84,8 +84,8 @@ class Cache(urllib2.BaseHandler):
             INSERT INTO crawl_progress 
             (department, status)
             VALUES
-            ('{department}', 'complete');
-            ''')
+            ('{department}', 'complete')
+            '''.format(dept))
 
     def clear(self, like=None):
         '''
@@ -143,6 +143,16 @@ class Cache(urllib2.BaseHandler):
         response = None
 
         if self.connection:
+            dept = request.get('dept')
+            if dept:
+                cursor = self.connection.cursor()
+                cursor.execute('''
+                    SELECT status FROM crawl_progress
+                    WHERE department='{dept}'
+                '''.format(dept))
+            if cursor.fetch() != 'complete':
+                return response
+
             url = request.get_full_url()
             postdata = request.get_data()
             cache_control = getattr(request, 'cache_control', '') or ''
