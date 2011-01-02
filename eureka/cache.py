@@ -77,6 +77,16 @@ class Cache(urllib2.BaseHandler):
         finally:
             cursor.close()
 
+    def set_department_as_complete(dept):
+        cursor = self.connection.cursor()
+        try:
+            cursor.execute('''
+            INSERT INTO crawl_progress 
+            (department, status)
+            VALUES
+            ('{department}', 'complete');
+            ''')
+
     def clear(self, like=None):
         '''
         Clears cache-entries from the database. If ``like`` is specified, we

@@ -185,6 +185,8 @@ class Crawler():
         request = urllib2.Request(url, data=data, headers=headers)
         if cache_control is not None:
             request.cache_control = str(cache_control)
+        if dept:
+            request.dept = dept
 
         # download multiple times in case of url-errors...
         error = None
