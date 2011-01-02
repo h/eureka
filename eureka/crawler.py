@@ -44,11 +44,14 @@ class Crawler():
     cookies to its requests. If ``cookies`` is set to a CookieJar object, that
     CookieJar object is used to store and handle http cookies.
 
+    If ``cache_control`` is null, all fetches will automatically use 
+    cache-control with a standard counter variable.
+
     '''
 
     def __init__(self, cookies=True, user_agent=default_user_agent,
             delay=0, retries=0, cache=True, silent=False, robotstxt=True,
-            verbose=False):
+            verbose=False, cache_control=False):
 
         http_processors = []
 
@@ -64,6 +67,12 @@ class Crawler():
             http_processors.append(cache)
         else:
             self.cache = None
+
+        if cache_control:
+            from itertools import count
+            self.cache_control = count()
+        else:
+            self.cache_control = None
 
         if cookies is not None:
             if cookies is True:
@@ -111,7 +120,7 @@ class Crawler():
     # IMPORTANT: if any arguments are added to fetch(), they must be added
     # below, as well, next to the other "IMPORTANT" comment
     def fetch(self, url, data=None, headers={}, referer=True,
-              cache_control=None, retries=None):
+              cache_control=None, retries=None, dept=None):
         '''
         Fetches the data at the given url. If ``data`` is ``None``, we use
         a GET request, otherwise, we use a POST request.
@@ -129,7 +138,14 @@ class Crawler():
         If a ``retries`` integer argument is specified, page fetches will be
         retried ``retries`` times on page-load errors.
 
+        If ``dept`` is specified, the crawler will only use the cache
+        if the given department is marked as completed.  See the method 
+        ``mark_complete`` for more information.
+
         '''
+
+        if self.cache_control and not cache_control:
+            cache_control = self.cache_control
 
         # determine the correct referer to use
         if referer is True: # yes, this is right
@@ -154,7 +170,7 @@ class Crawler():
                 # function, then they must be added here, as well!!!
                 http = partial(self._open_http, headers=headers,
                                referer=referer, cache_control=cache_control,
-                               retries=retries)
+                               retries=retries, dept=dept)
                 return html.submit_form(url, extra_values=data, open_http=http)
             else:
                 raise ValueError('Crawler.fetch expects url of type '

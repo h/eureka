@@ -50,7 +50,7 @@ class Cache(urllib2.BaseHandler):
             CREATE TABLE IF NOT EXISTS cache (
                 date DATETIME NOT NULL,
 
-                url VARCHAR(1024) NOT NULL,
+                url VARCHAR(4112) NOT NULL,
                 postdata BLOB,
                 headers TEXT NOT NULL,
                 cache_control VARCHAR(128) NOT NULL,
@@ -61,6 +61,14 @@ class Cache(urllib2.BaseHandler):
                 response_data BLOB NOT NULL
             )
             ''')
+
+            cursor.execute('''
+            CREATE TABLE IF NOT EXISTS crawl_progress (
+                department varchar(128),
+                status varchar(64),
+            )
+            ''')
+
             cursor.execute('''
             CREATE UNIQUE INDEX IF NOT EXISTS
                 cache_index
