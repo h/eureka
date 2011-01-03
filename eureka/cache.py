@@ -207,15 +207,35 @@ class Cache(urllib2.BaseHandler):
                     (''.join(response_headers.headers), response_data)
 
             cursor = self.connection.cursor()
+
             cursor.execute('''
-            INSERT INTO
+            SELECT url FROM 
                 cache
-                (date, url, postdata, headers, cache_control, response_url,
-                 response_code, response_message, response_data)
-            VALUES
-                (datetime('now'), ?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (url, binary_postdata, headers, cache_control, response_url,
-                  response_code, response_message, Binary(text)))
+            WHERE 
+                url = ? and postdata IS NULL = ? and
+                CAST(IFNULL(postdata, '') AS BLOB) = ? and
+                headers = ? and cache_control = ?
+        ''', (url, postdata is None, binary_postdata, headers,
+              cache_control))
+
+            results = cursor.fetchall()
+
+            if not results:
+
+                cursor.execute('''
+                INSERT INTO
+                    cache
+                    (date, url, postdata, headers, cache_control, 
+                     response_url, response_code, response_message,
+                     response_data)
+                VALUES
+                    (datetime('now'), ?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (url, binary_postdata, headers, cache_control, 
+                      response_url, response_code, response_message, 
+                      Binary(text)))
+
+            
+
             self.connection.commit()
             cursor.close()
 
