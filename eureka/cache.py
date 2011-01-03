@@ -63,9 +63,8 @@ class Cache(urllib2.BaseHandler):
             ''')
 
             cursor.execute('''
-            CREATE TABLE IF NOT EXISTS crawl_progress (
-                department varchar(128),
-                status varchar(64),
+            CREATE TABLE IF NOT EXISTS completed_departments (
+                department varchar(128)
             )
             ''')
 
@@ -77,15 +76,15 @@ class Cache(urllib2.BaseHandler):
         finally:
             cursor.close()
 
-    def set_department_as_complete(dept):
+    def set_department_as_complete(self, dept):
         cursor = self.connection.cursor()
         try:
             cursor.execute('''
-            INSERT INTO crawl_progress 
-            (department, status)
-            VALUES
-            ('{department}', 'complete')
+            INSERT INTO completed_departments 
+            (department) VALUES ("{0}")
             '''.format(dept))
+        finally:
+            cursor.close()
 
     def clear(self, like=None):
         '''
@@ -143,15 +142,18 @@ class Cache(urllib2.BaseHandler):
         response = None
 
         if self.connection:
-            dept = request.get('dept')
+            dept = getattr(request, 'dept', None)
             if dept:
                 cursor = self.connection.cursor()
                 cursor.execute('''
-                    SELECT status FROM crawl_progress
-                    WHERE department='{dept}'
-                '''.format(dept))
-            if cursor.fetch() != 'complete':
-                return response
+                SELECT department 
+                FROM completed_departments
+                WHERE department="{dept}"
+                '''.format(dept=dept))
+                use_cache = cursor.fetchall()
+                cursor.close()
+                if not use_cache:
+                    return response
 
             url = request.get_full_url()
             postdata = request.get_data()
@@ -160,8 +162,14 @@ class Cache(urllib2.BaseHandler):
 
             results = self._fetch(url, postdata, headers, cache_control)
             if len(results) > 1:
+                print('Multiple cache entries!  Printing request:')
+                print(url, postdata, cache_control, headers)
+                print('Printing results')
+                for result in results:
+                    _, code, msg, _ = result
+                    print(code, msg)
                 raise EurekaException('Found multiple cache entries with '
-                                      'identical http requests')
+                                      'identical http requests.')
             elif len(results) == 1:
                 url, code, msg, data = results[0]
                 response = _make_response(url, code, msg, data)

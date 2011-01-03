@@ -44,7 +44,7 @@ class Crawler():
     cookies to its requests. If ``cookies`` is set to a CookieJar object, that
     CookieJar object is used to store and handle http cookies.
 
-    If ``cache_control`` is null, all fetches will automatically use 
+    If ``cache_control`` is not null, all fetches will automatically use 
     cache-control with a standard counter variable.
 
     '''
@@ -145,7 +145,7 @@ class Crawler():
         '''
 
         if self.cache_control and not cache_control:
-            cache_control = self.cache_control
+            cache_control = self.cache_control.next()
 
         # determine the correct referer to use
         if referer is True: # yes, this is right
@@ -185,6 +185,7 @@ class Crawler():
         request = urllib2.Request(url, data=data, headers=headers)
         if cache_control is not None:
             request.cache_control = str(cache_control)
+        
         if dept:
             request.dept = dept
 
