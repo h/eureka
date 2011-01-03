@@ -74,7 +74,7 @@ class Crawler():
         else:
             self.cache_control = None
 
-        if cookies is not None:
+        if cookies is not None and cookies is not False:
             if cookies is True:
                 import cookielib
                 self.cookies = cookielib.CookieJar()
@@ -287,7 +287,8 @@ class Crawler():
         encoding = kwargs.pop('encoding', None)
 
         with self.fetch(*args, **kwargs) as fp:
-            result = etree.parse(fp, parser=HTMLParser(encoding=encoding)).getroot()
+            result = etree.parse(
+                fp, parser=HTMLParser(encoding=encoding)).getroot()
             result.make_links_absolute(fp.geturl())
             return result
 
