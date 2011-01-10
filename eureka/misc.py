@@ -1,4 +1,5 @@
 from itertools import groupby
+from urllib import quote_plus
 
 # {{{ functions related to short_repr
 max_len = 66
@@ -80,13 +81,88 @@ def split_by_comma(string):
     return lst_new
 
 def urldecode(string):
-    ''' opposite of urllib.urlencode '''
+    '''
+    Opposite of urlencode(). If a parameter doesn't include an equal sign, the
+    "value" of the parameter is set to None.
+
+    '''
 
     import urllib
 
-    return tuple(tuple(urllib.unquote(item)
-                       for item in entry.split('=', 1))
-                 for entry in string.split('&'))
+    for entry in string.split('&'):
+        if '=' in entry:
+            key, value = entry.split('=', 1)
+            yield urllib.unquote(key), urllib.unquote(value)
+        else:
+            yield urllib.unquote(entry), None
+
+def urlencode(query, doseq=0):
+    """
+    Same as urllib.urlencode, but queries with items whose second element is
+    None will be converted to a url argument without an equal sign.
+
+    """
+
+    if hasattr(query,"items"):
+        # mapping objects
+        query = query.items()
+    else:
+        # it's a bother at times that strings and string-like objects are
+        # sequences...
+        try:
+            # non-sequence items should not work with len()
+            # non-empty strings will fail this
+            if len(query) and not isinstance(query[0], tuple):
+                raise TypeError
+            # zero-length sequences of all types will get here and succeed,
+            # but that's a minor nit - since the original implementation
+            # allowed empty dicts that type of behavior probably should be
+            # preserved for consistency
+        except TypeError:
+            ty,va,tb = sys.exc_info()
+            raise TypeError, "not a valid non-string sequence or mapping object", tb
+
+    l = []
+    if not doseq:
+        # preserve old behavior
+        for k, v in query:
+            k = quote_plus(str(k))
+            if v is None:
+                l.append(k)
+            else:
+                v = quote_plus(str(v))
+                l.append(k + '=' + v)
+    else:
+        for k, v in query:
+            k = quote_plus(str(k))
+            if isinstance(v, str):
+                v = quote_plus(v)
+                l.append(k + '=' + v)
+            elif isinstance(v, unicode):
+                # is there a reasonable way to convert to ASCII?
+                # encode generates a string, but "replace" or "ignore"
+                # lose information and "strict" can raise UnicodeError
+                v = quote_plus(v.encode("ASCII","replace"))
+                l.append(k + '=' + v)
+            else:
+                if v is None:
+                    l.append(k)
+                else:
+                    try:
+                        # is this a sufficient test for sequence-ness?
+                        x = len(v)
+                    except TypeError:
+                        # not a sequence
+                        v = quote_plus(str(v))
+                        l.append(k + '=' + v)
+                    else:
+                        # loop over the sequence
+                        for elt in v:
+                            if elt is None:
+                                elt = k
+                            l.append(k + '=' + quote_plus(str(elt)))
+
+    return '&'.join(l)
 
 def chain(iterable):
     '''
