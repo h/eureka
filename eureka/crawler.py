@@ -4,7 +4,7 @@ import urlparse
 from time import time, sleep
 from functools import partial
 from random import random
-from eureka.misc import urldecode, short_repr
+from eureka.misc import urldecode, urlencode, short_repr
 from sys import stderr
 from copy import copy
 import logging
@@ -179,13 +179,13 @@ class Crawler():
 
         # the post-data needs to be url-encoded if it isn't a string
         if data is not None and not isinstance(data, basestring):
-            data = urllib.urlencode(data, doseq=1)
+            data = urlencode(data, doseq=1)
 
         # alright, we're ready to download the page!
         request = urllib2.Request(url, data=data, headers=headers)
         if cache_control is not None:
             request.cache_control = str(cache_control)
-        
+
         if dept:
             request.dept = dept
 
@@ -455,13 +455,14 @@ def add_parameters_to_url(url, values):
     # values for them...
     delete_keys = set(dict(values))
     new_query = []
+
     for key, value in query_list:
         if key not in delete_keys:
             new_query.append((key, value))
     for key, value in values:
         new_query.append((key, value))
 
-    query = urllib.urlencode(new_query)
+    query = urlencode(new_query, doseq=1)
     return urlparse.urlunparse((scheme, netloc, path, params, query, fragment))
 
 crawler = Crawler()
