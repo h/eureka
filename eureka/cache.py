@@ -11,6 +11,7 @@ from StringIO import StringIO
 from sqlite3 import Binary
 
 from eureka import EurekaException
+from eureka.misc import urldecode
 
 class Cache(urllib2.BaseHandler):
     '''
