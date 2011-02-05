@@ -11,7 +11,6 @@ from StringIO import StringIO
 from sqlite3 import Binary
 
 from eureka import EurekaException
-from eureka.misc import urldecode
 
 class Cache(urllib2.BaseHandler):
     '''
@@ -63,9 +62,8 @@ class Cache(urllib2.BaseHandler):
             ''')
 
             cursor.execute('''
-            CREATE TABLE IF NOT EXISTS crawl_progress (
-                department varchar(128),
-                status varchar(64),
+            CREATE TABLE IF NOT EXISTS completed_departments (
+                department varchar(128)
             )
             ''')
 
@@ -74,6 +72,16 @@ class Cache(urllib2.BaseHandler):
                 cache_index
             ON  cache (url, postdata, headers, cache_control);
             ''')
+        finally:
+            cursor.close()
+
+    def set_department_as_complete(self, dept):
+        cursor = self.connection.cursor()
+        try:
+            cursor.execute('''
+            INSERT INTO completed_departments 
+            (department) VALUES ("{0}")
+            '''.format(dept))
         finally:
             cursor.close()
 
@@ -133,6 +141,19 @@ class Cache(urllib2.BaseHandler):
         response = None
 
         if self.connection:
+            dept = getattr(request, 'dept', None)
+            if dept:
+                cursor = self.connection.cursor()
+                cursor.execute('''
+                SELECT department 
+                FROM completed_departments
+                WHERE department="{dept}"
+                '''.format(dept=dept))
+                use_cache = cursor.fetchall()
+                cursor.close()
+                if not use_cache:
+                    return response
+
             url = request.get_full_url()
             postdata = request.get_data()
             cache_control = getattr(request, 'cache_control', '') or ''
@@ -140,8 +161,14 @@ class Cache(urllib2.BaseHandler):
 
             results = self._fetch(url, postdata, headers, cache_control)
             if len(results) > 1:
+                print('Multiple cache entries!  Printing request:')
+                print(url, postdata, cache_control, headers)
+                print('Printing results')
+                for result in results:
+                    _, code, msg, _ = result
+                    print(code, msg)
                 raise EurekaException('Found multiple cache entries with '
-                                      'identical http requests')
+                                      'identical http requests.')
             elif len(results) == 1:
                 url, code, msg, data = results[0]
                 response = _make_response(url, code, msg, data)
@@ -179,15 +206,35 @@ class Cache(urllib2.BaseHandler):
                     (''.join(response_headers.headers), response_data)
 
             cursor = self.connection.cursor()
+
             cursor.execute('''
-            INSERT INTO
+            SELECT url FROM 
                 cache
-                (date, url, postdata, headers, cache_control, response_url,
-                 response_code, response_message, response_data)
-            VALUES
-                (datetime('now'), ?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (url, binary_postdata, headers, cache_control, response_url,
-                  response_code, response_message, Binary(text)))
+            WHERE 
+                url = ? and postdata IS NULL = ? and
+                CAST(IFNULL(postdata, '') AS BLOB) = ? and
+                headers = ? and cache_control = ?
+        ''', (url, postdata is None, binary_postdata, headers,
+              cache_control))
+
+            results = cursor.fetchall()
+
+            if not results:
+
+                cursor.execute('''
+                INSERT INTO
+                    cache
+                    (date, url, postdata, headers, cache_control, 
+                     response_url, response_code, response_message,
+                     response_data)
+                VALUES
+                    (datetime('now'), ?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (url, binary_postdata, headers, cache_control, 
+                      response_url, response_code, response_message, 
+                      Binary(text)))
+
+            
+
             self.connection.commit()
             cursor.close()
 
