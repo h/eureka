@@ -388,7 +388,6 @@ class HTTPRequestPrinter(urllib2.BaseHandler):
         if request.data is not None:
             result.append('')
             result.append(request.data)
-            result.append('\n'.join(request.data.split('&')))
 
         result.append('') # end the output with a newline
         return '\n'.join(result)
@@ -451,9 +450,6 @@ def add_parameters_to_url(url, values):
 
     scheme, netloc, path, params, query, fragment = urlparse.urlparse(url)
     query_list = urldecode(query)
-    if len(query_list) < 2:
-        print(url)
-        print(query_list)
 
     # remove these keys from the GET parameters, as we are specifying new
     # values for them...
