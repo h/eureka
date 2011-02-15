@@ -388,6 +388,7 @@ class HTTPRequestPrinter(urllib2.BaseHandler):
         if request.data is not None:
             result.append('')
             result.append(request.data)
+            result.append('\n'.join(request.data.split('&')))
 
         result.append('') # end the output with a newline
         return '\n'.join(result)
