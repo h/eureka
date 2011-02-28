@@ -260,7 +260,7 @@ def entity_encode(string):
     if string is None:
         return None
     else:
-        return string.encode('ascii', 'xmlcharrefreplace')
+        return string.encode('utf8') #XXX Handle errors
 
 def uniq(iterable):
     return (x[0] for x in groupby(sorted(iterable)))
