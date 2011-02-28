@@ -17,7 +17,7 @@ def connect(database, return_false_if_not_found=False):
         database = os.path.join(eureka_base, database)
         is_new_file = not os.path.isfile(database)
 
-    connection = sqlite3.connect(database)
+    connection = sqlite.connect(database)
     connection.text_factory = str
 
     if is_new_file:
