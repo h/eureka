@@ -64,8 +64,7 @@ class Cache(urllib2.BaseHandler):
 
             cursor.execute('''
             CREATE TABLE IF NOT EXISTS crawl_progress (
-                department varchar(128),
-                status varchar(64),
+                department varchar(128)
             )
             ''')
 

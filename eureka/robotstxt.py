@@ -40,6 +40,8 @@ class RobotsTxt(urllib2.BaseHandler):
         if robot_url in self.robot_files:
             robot_file = self.robot_files[robot_url]
         else:
+            # Set this url to None to catch recursion loops
+            self.robot_files[robot_url] = None 
             try:
                 robotstxt = self.parent.open(robot_url)
                 try:
