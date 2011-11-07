@@ -51,7 +51,7 @@ class Crawler():
 
     def __init__(self, cookies=True, user_agent=default_user_agent,
             delay=0, retries=0, cache=True, silent=False, robotstxt=True,
-            verbose=False, cache_control=False):
+            verbose=False, cache_control=False, sanitize=False):
 
         http_processors = []
 
@@ -102,6 +102,8 @@ class Crawler():
         else:
             self.opener.addheaders = []
 
+        self.sanitize = sanitize
+
         self.retries = retries
 
     def _open_http(self, method, url, values, **extra_args):
@@ -120,7 +122,7 @@ class Crawler():
     # IMPORTANT: if any arguments are added to fetch(), they must be added
     # below, as well, next to the other "IMPORTANT" comment
     def fetch(self, url, data=None, headers={}, referer=True,
-              cache_control=None, retries=None, dept=None):
+              cache_control=None, retries=None):
         '''
         Fetches the data at the given url. If ``data`` is ``None``, we use
         a GET request, otherwise, we use a POST request.
@@ -137,10 +139,6 @@ class Crawler():
 
         If a ``retries`` integer argument is specified, page fetches will be
         retried ``retries`` times on page-load errors.
-
-        If ``dept`` is specified, the crawler will only use the cache
-        if the given department is marked as completed.  See the method 
-        ``mark_complete`` for more information.
 
         '''
 
@@ -185,9 +183,6 @@ class Crawler():
         request = urllib2.Request(url, data=data, headers=headers)
         if cache_control is not None:
             request.cache_control = str(cache_control)
-
-        if dept:
-            request.dept = dept
 
         # download multiple times in case of url-errors...
         error = None
@@ -265,7 +260,7 @@ class Crawler():
         from eureka.xml import XHTMLParser
         from lxml import etree
 
-        encoding = kwargs.pop('encoding', None)
+        encoding = kwargs.pop('encoding', 'utf-8')
 
         with self.fetch(*args, **kwargs) as fp:
             result = etree.parse(fp, parser=XHTMLParser(encoding=encoding)).getroot()
@@ -287,8 +282,18 @@ class Crawler():
         encoding = kwargs.pop('encoding', None)
 
         with self.fetch(*args, **kwargs) as fp:
-            result = etree.parse(
-                fp, parser=HTMLParser(encoding=encoding)).getroot()
+            if self.sanitize:
+                from StringIO import StringIO
+                raw = fp.read()
+                processed = raw.decode('ascii', 'ignore').encode(
+                        'utf-8', 'ignore')
+                result = etree.parse(
+                        StringIO(processed), parser=HTMLParser(encoding=encoding)
+                        ).getroot()
+            else:
+                result = etree.parse(
+                    fp, parser=HTMLParser(encoding=encoding)).getroot()
+            
             result.make_links_absolute(fp.geturl())
             return result
 
