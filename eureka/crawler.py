@@ -168,7 +168,7 @@ class Crawler():
                 # function, then they must be added here, as well!!!
                 http = partial(self._open_http, headers=headers,
                                referer=referer, cache_control=cache_control,
-                               retries=retries, dept=dept)
+                               retries=retries)
                 return html.submit_form(url, extra_values=data, open_http=http)
             else:
                 raise ValueError('Crawler.fetch expects url of type '
