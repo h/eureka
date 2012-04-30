@@ -8,6 +8,7 @@ from eureka.misc import urldecode, urlencode, short_repr
 from sys import stderr
 from copy import copy
 import logging
+from itertools import tee, izip
 
 __all__ = ('firefox_user_agent', 'default_user_agent', 'crawler', 'Crawler')
 
@@ -51,7 +52,7 @@ class Crawler():
 
     def __init__(self, cookies=True, user_agent=default_user_agent,
             delay=0, retries=0, cache=True, silent=False, robotstxt=True,
-            verbose=False, cache_control=False, sanitize=False):
+            verbose=False, truncate=False, cache_control=False, sanitize=False):
 
         http_processors = []
 
@@ -86,7 +87,7 @@ class Crawler():
 
         if not silent:
             # http requests are printed whenever a request is made
-            self._http_request_printer = HTTPRequestPrinter(verbose=verbose)
+            self._http_request_printer = HTTPRequestPrinter(verbose=verbose, truncate=truncate)
             http_processors.append(self._http_request_printer)
 
         if delay != 0:
@@ -326,8 +327,9 @@ class HTTPRequestPrinter(urllib2.BaseHandler):
 
     handler_order = 999 # run this at the very end
 
-    def __init__(self, verbose=False):
+    def __init__(self, verbose=False, truncate=False):
         self.verbose = verbose
+        self.truncate = truncate
 
     def http_request(self, request):
         logging.debug(self.request_description(request))
@@ -358,9 +360,11 @@ class HTTPRequestPrinter(urllib2.BaseHandler):
 
     def request_description(self, request):
         if self.verbose:
-            return HTTPRequestPrinter.verbose_request_description(request)
+            return HTTPRequestPrinter.verbose_request_description(request,
+                    truncate=self.truncate)
         else:
-            return HTTPRequestPrinter.basic_request_description(request)
+            return HTTPRequestPrinter.basic_request_description(request,
+                    truncate=self.truncate)
 
     @staticmethod
     def basic_request_description(request):
@@ -374,7 +378,7 @@ class HTTPRequestPrinter(urllib2.BaseHandler):
                            short_repr(request.get_full_url(), 48))
 
     @staticmethod
-    def verbose_request_description(request):
+    def verbose_request_description(request, truncate=False):
         '''
         Returns the entire HTTP request the way it is sent to the server.
 
@@ -387,13 +391,19 @@ class HTTPRequestPrinter(urllib2.BaseHandler):
         url = urlparse.urlunsplit(('', '', path, query_string, ''))
         result.append('%s %s HTTP/1.1' % (request.get_method(), url))
         for header_name, header_value in request.header_items():
-            result.append('%s: %s' % (header_name, header_value))
+            if truncate:
+                result.append('%s: %s' % (header_name[:1000], 
+                                          header_value[:1000]))
+            else:
+                result.append('%s: %s' % (header_name, header_value))
 
         # print post data, if the request has any
         if request.data is not None:
             result.append('')
-            result.append(request.data)
-            result.append('\n'.join(request.data.split('&')))
+            postdata = request.data.split('&')
+            if truncate:
+                postdata = [x[:1000] for x in postdata]
+            result.append('\n'.join(postdata))
 
         result.append('') # end the output with a newline
         return '\n'.join(result)
