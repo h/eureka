@@ -363,8 +363,7 @@ class HTTPRequestPrinter(urllib2.BaseHandler):
             return HTTPRequestPrinter.verbose_request_description(request,
                     truncate=self.truncate)
         else:
-            return HTTPRequestPrinter.basic_request_description(request,
-                    truncate=self.truncate)
+            return HTTPRequestPrinter.basic_request_description(request)
 
     @staticmethod
     def basic_request_description(request):
