@@ -366,10 +366,13 @@ class HTTPRequestPrinter(urllib2.BaseHandler):
             return HTTPRequestPrinter.basic_request_description(request)
 
     @staticmethod
-    def basic_request_description(request):
+    def basic_request_description(request, truncate=False):
         '''
         Returns an abbreviated description of the request, including the
         request method (GET/POST), as well as an abbreviated url.
+
+        truncate isn't used, but is taken as an input for consistency with
+        verbose_request_description
 
         '''
 
