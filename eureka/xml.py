@@ -40,6 +40,27 @@ class EurekaElement(etree.ElementBase):
 
     '''
 
+    def css1(self, _path):
+        ''' Same as `css()`, but requires that only one result is returned '''
+
+        results = self.css(_path)
+        if len(results) == 1:
+            return results[0]
+        else:
+            raise EurekaXPathError(self,
+                '\n\n  Got %s results for CSS expression: "%s"\n'
+                '  Expected one result. CSS was run on xml tag "<%s>"\n'
+                % (len(results), _path, self.tag))
+
+    def css(self, _path):
+        '''
+        Same as self.xpath(), but uses CSS selector syntax instead of xpath.
+
+        '''
+
+        from lxml.cssselect import CSSSelector
+        return self.xpath(CSSSelector(_path).path)
+
     def select(self, _path, join_function=None, *args, **kwargs):
         '''
         essentially equivalent to ``xml.xpath(...)[0]``. A ``default`` keyword
@@ -70,7 +91,7 @@ class EurekaElement(etree.ElementBase):
     def __call__(self, _path, join=None, *args, **kwargs):
         '''
         synonym for self.select(...).text.
-        
+
         If a ``join`` string is specified and there are multiple results, they
         will be concatenated with the join string, in stead of returning an
         error.
