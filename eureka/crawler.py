@@ -1,13 +1,16 @@
+#TODO: don't cache retried errors when cookies are disabled (?)
 import urllib2
+import httplib
+import logging
 import urllib
 import urlparse
+import socket
 from time import time, sleep
 from functools import partial
 from random import random
 from eureka.misc import urldecode, urlencode, short_repr
 from sys import stderr
 from copy import copy
-import logging
 from itertools import tee, izip
 
 __all__ = ('firefox_user_agent', 'default_user_agent', 'crawler', 'Crawler')
@@ -195,8 +198,15 @@ class Crawler():
                 return result
 
             except urllib2.HTTPError, e:
-                # if many errors happen, retain the first one
-                error = error or e
+                if 500 <= e.code < 600 :
+                    # if many errors happen, retain the first one
+                    print 'passing_HTTP_ERROR:' + url + ':retry:' + str(retry)
+                    error = error or e
+                    import time
+                    import random
+                    time.sleep(5 * 2**min(retry, 8) * random.random())
+                else:
+                    raise
 
             except urllib2.URLError, e:
                 # check whether we should re-try fetching the page
@@ -206,9 +216,19 @@ class Crawler():
                     raise e
                 else:
                     # if many errors happen, retain the first one
+                    print 'passing_CONNECTION_ERROR:' + url + ':retry:' + str(retry)
+                    time.sleep(5 * 2**min(retry, 8) * random.random())
                     error = error or e
 
+            except (httplib.IncompleteRead, httplib.BadStatusLine, socket.error), e:
+                error = error or e
+                import time
+                import random
+                print 'passing_NETWORK_ERROR:' + url + ':retry:' + str(retry)
+                time.sleep(5 * 2**min(retry, 8) * random.random())
+
         # we can only get here, if an error occurred
+        print 'RAISE_ERROR:::::' + url + ':RETRIED:' + str(retry)
         raise error
 
     def fetch_xml(self, *args, **kwargs):
@@ -265,7 +285,7 @@ class Crawler():
 
         with self.fetch(*args, **kwargs) as fp:
             result = etree.parse(fp, parser=XHTMLParser(encoding=encoding)).getroot()
-            result.make_links_absolute(fp.geturl())
+            result.make_links_absolute(fp.geturl(), handle_failures='ignore')
             return result
 
     def fetch_html(self, *args, **kwargs):
@@ -282,21 +302,33 @@ class Crawler():
 
         encoding = kwargs.pop('encoding', None)
 
-        with self.fetch(*args, **kwargs) as fp:
-            if self.sanitize:
-                from StringIO import StringIO
-                raw = fp.read()
-                processed = raw.decode('ascii', 'ignore').encode(
-                        'utf-8', 'ignore')
-                result = etree.parse(
-                        StringIO(processed), parser=HTMLParser(encoding=encoding)
-                        ).getroot()
-            else:
-                result = etree.parse(
-                    fp, parser=HTMLParser(encoding=encoding)).getroot()
-            
-            result.make_links_absolute(fp.geturl())
-            return result
+        error = None
+        for retry in xrange(self.retries+1):
+          try:
+            with self.fetch(*args, **kwargs) as fp:
+                if self.sanitize:
+                    from StringIO import StringIO
+                    raw = fp.read()
+                    processed = raw.decode('ascii', 'ignore').encode(
+                            'utf-8', 'ignore')
+                    result = etree.parse(
+                            StringIO(processed), parser=HTMLParser(encoding=encoding)
+                            ).getroot()
+                else:
+                    result = etree.parse(
+                        fp, parser=HTMLParser(encoding=encoding)).getroot()
+
+                result.make_links_absolute(fp.geturl(), handle_failures='ignore')
+                return result
+          except httplib.IncompleteRead, e:
+            error = error or e
+            import time
+            import random
+            print 'passing_INCOMPLETE_READ.retry:' + str(retry)
+            time.sleep(5 * 2**min(retry, 8) * random.random())
+
+        print 'raising_INCOMPLETE_READ:RETRIED:' + str(retry)
+        raise error
 
     def fetch_broken_html(self, *args, **kwargs):
         '''
@@ -311,7 +343,7 @@ class Crawler():
         with self.fetch(*args, **kwargs) as fp:
             result = soupparser.parse(fp,
                      makeelement=HTMLParser().makeelement).getroot()
-            result.make_links_absolute(fp.geturl())
+            result.make_links_absolute(fp.geturl(), handle_failures='ignore')
             return result
 
 class HTTPRequestPrinter(urllib2.BaseHandler):
